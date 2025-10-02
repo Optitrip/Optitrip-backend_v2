@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import serverless from "serverless-http";
 import connectDB from "./database/ConnectionDB.js";
 import bodyParser from "body-parser";
@@ -21,7 +20,19 @@ const __dirname = path.join(process.cwd(), 'functions');
 
 const app = express();
 
-app.use(cors());
+// Middleware para CORS - DEBE IR PRIMERO
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.json());
@@ -41,66 +52,36 @@ app.use('/api-docs/favicon-16x16.png', express.static(path.join(__dirname, 'swag
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-const router = express.Router();
-router.get("/users", getUsers);
-router.get("/users/admin", getUsersAdmin);
-router.get("/users/driver", getUsersDriver);
-router.get("/user/:id", getUserById);
-router.post("/users", createUser);
-router.put("/user/:id", updateUser);
-router.delete("/user/:id", deleteUser);
-router.post("/login", login);
-router.post("/reset-password/:id", resetPassword);
-router.post("/move-account/", moveAccount);
-router.post("/routes", createRoute);
-router.get("/route/:codeRoute", getRouteByCodeRoute);
-router.get("/route/driver/:driverId", getRoutesByDriverId);
-router.patch("/route/status/:codeRoute", updateRouteStatus);
-router.post("/task", upload.array('images'), createTask);
-router.post("/report/details/driver", getReportDetailsByDriver);
-router.post("/report/details/status", getReportDetailsByStatus);
-router.post("/report/details/customer", getReportDetailsByCustomer);
-router.post("/report/details/codeRoute", getReportDetailsByCodeRoute);
-router.post("/track", trackDriverLocation);
+// IMPORTANTE: Las rutas NO deben tener el prefijo /.netlify/functions/server
+// Netlify lo agrega automáticamente
+app.get("/users", getUsers);
+app.get("/users/admin", getUsersAdmin);
+app.get("/users/driver", getUsersDriver);
+app.get("/user/:id", getUserById);
+app.post("/users", createUser);
+app.put("/user/:id", updateUser);
+app.delete("/user/:id", deleteUser);
+app.post("/login", login);
+app.post("/reset-password/:id", resetPassword);
+app.post("/move-account/", moveAccount);
+app.post("/routes", createRoute);
+app.get("/route/:codeRoute", getRouteByCodeRoute);
+app.get("/route/driver/:driverId", getRoutesByDriverId);
+app.patch("/route/status/:codeRoute", updateRouteStatus);
+app.post("/task", upload.array('images'), createTask);
+app.post("/report/details/driver", getReportDetailsByDriver);
+app.post("/report/details/status", getReportDetailsByStatus);
+app.post("/report/details/customer", getReportDetailsByCustomer);
+app.post("/report/details/codeRoute", getReportDetailsByCodeRoute);
+app.post("/track", trackDriverLocation);
 
 setInterval(async () => {
   console.log('Running tracking status update...');
   await updateTrackingStatuses();
 }, 60000);
 
-app.use('/.netlify/functions/server', router);
-
-// Handler modificado para Netlify Functions
-export const handler = async (event, context) => {
-  // Si es una petición OPTIONS (preflight), responder directamente
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, X-Requested-With',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-        'Access-Control-Max-Age': '86400',
-      },
-      body: ''
-    };
-  }
-
-  // Para otras peticiones, usar serverless-http
-  const serverlessHandler = serverless(app);
-  const result = await serverlessHandler(event, context);
-
-  // Agregar headers CORS a la respuesta
-  return {
-    ...result,
-    headers: {
-      ...result.headers,
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, X-Requested-With',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    }
-  };
-};
+// Exportar el handler
+export const handler = serverless(app);
 
 if (process.env.NODE_ENV !== 'production') {
   const port = process.env.PORT || 5000;
