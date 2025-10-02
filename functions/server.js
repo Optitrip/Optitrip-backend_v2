@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import serverless from "serverless-http";
 import connectDB from "./database/ConnectionDB.js";
 import bodyParser from "body-parser";
@@ -19,23 +20,16 @@ import multer from 'multer';
 const __dirname = path.join(process.cwd(), 'functions');
 
 const app = express();
-
-// Middleware para CORS - DEBE IR PRIMERO
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(cors({
+  origin: '*',
+  methods: 'GET, POST, PUT, DELETE, OPTIONS',
+  allowedHeaders: 'Content-Type'
+}));
 app.use(express.json());
+
+app.options('*', cors());
 
 // Configuración de multer para manejar multipart/form-data
 const storage = multer.memoryStorage();
@@ -52,36 +46,37 @@ app.use('/api-docs/favicon-16x16.png', express.static(path.join(__dirname, 'swag
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-// IMPORTANTE: Las rutas NO deben tener el prefijo /.netlify/functions/server
-// Netlify lo agrega automáticamente
-app.get("/users", getUsers);
-app.get("/users/admin", getUsersAdmin);
-app.get("/users/driver", getUsersDriver);
-app.get("/user/:id", getUserById);
-app.post("/users", createUser);
-app.put("/user/:id", updateUser);
-app.delete("/user/:id", deleteUser);
-app.post("/login", login);
-app.post("/reset-password/:id", resetPassword);
-app.post("/move-account/", moveAccount);
-app.post("/routes", createRoute);
-app.get("/route/:codeRoute", getRouteByCodeRoute);
-app.get("/route/driver/:driverId", getRoutesByDriverId);
-app.patch("/route/status/:codeRoute", updateRouteStatus);
-app.post("/task", upload.array('images'), createTask);
-app.post("/report/details/driver", getReportDetailsByDriver);
-app.post("/report/details/status", getReportDetailsByStatus);
-app.post("/report/details/customer", getReportDetailsByCustomer);
-app.post("/report/details/codeRoute", getReportDetailsByCodeRoute);
-app.post("/track", trackDriverLocation);
+const router = express.Router();
+router.get("/users", getUsers);
+router.get("/users/admin", getUsersAdmin);
+router.get("/users/driver", getUsersDriver);
+router.get("/user/:id", getUserById);
+router.post("/users", createUser);
+router.put("/user/:id", updateUser);
+router.delete("/user/:id", deleteUser);
+router.post("/login", login);
+router.post("/reset-password/:id", resetPassword);
+router.post("/move-account/", moveAccount);
+router.post("/routes", createRoute);
+router.get("/route/:codeRoute", getRouteByCodeRoute);
+router.get("/route/driver/:driverId", getRoutesByDriverId);
+router.patch("/route/status/:codeRoute", updateRouteStatus);
+router.post("/task", upload.array('images'), createTask);
+router.post("/report/details/driver", getReportDetailsByDriver);
+router.post("/report/details/status", getReportDetailsByStatus);
+router.post("/report/details/customer", getReportDetailsByCustomer);
+router.post("/report/details/codeRoute", getReportDetailsByCodeRoute);
+router.post("/track", trackDriverLocation);
 
 setInterval(async () => {
   console.log('Running tracking status update...');
   await updateTrackingStatuses();
 }, 60000);
 
-// Exportar el handler
-export const handler = serverless(app);
+app.use('/.netlify/functions/server', router);
+
+const handler = serverless(app);
+export { handler };
 
 if (process.env.NODE_ENV !== 'production') {
   const port = process.env.PORT || 5000;
