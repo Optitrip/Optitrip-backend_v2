@@ -1,0 +1,13 @@
+[build]
+    command = "npm install"
+    functions = "functions/"
+
+[[redirects]]
+    from = "/api-docs/*"
+    to = "/.netlify/functions/server/:splat"
+    status = 200
+
+[functions]
+    node_bundler = "esbuild"
+    external_node_modules = ["mongoose", "dotenv"]
+    included_files = ["functions/**"]
