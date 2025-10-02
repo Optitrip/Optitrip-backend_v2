@@ -21,33 +21,10 @@ const __dirname = path.join(process.cwd(), 'functions');
 
 const app = express();
 
-// Configuración de CORS
-const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://optitrip-backend.netlify.app'], // Agrega aquí tu dominio de frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.json());
-
-// Middleware adicional para asegurar headers CORS en todas las respuestas
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Responder a preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
 
 // Configuración de multer para manejar multipart/form-data
 const storage = multer.memoryStorage();
@@ -93,25 +70,37 @@ setInterval(async () => {
 
 app.use('/.netlify/functions/server', router);
 
-// Wrapper del handler con headers CORS adicionales
-const handler = async (event, context) => {
+// Handler modificado para Netlify Functions
+export const handler = async (event, context) => {
+  // Si es una petición OPTIONS (preflight), responder directamente
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, X-Requested-With',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+        'Access-Control-Max-Age': '86400',
+      },
+      body: ''
+    };
+  }
+
+  // Para otras peticiones, usar serverless-http
   const serverlessHandler = serverless(app);
   const result = await serverlessHandler(event, context);
-  
-  // Asegurar headers CORS en la respuesta
+
+  // Agregar headers CORS a la respuesta
   return {
     ...result,
     headers: {
       ...result.headers,
-      'Access-Control-Allow-Origin': event.headers.origin || '*',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, X-Requested-With',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
-      'Access-Control-Allow-Credentials': 'true',
     }
   };
 };
-
-export { handler };
 
 if (process.env.NODE_ENV !== 'production') {
   const port = process.env.PORT || 5000;
