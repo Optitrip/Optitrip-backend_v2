@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "echo 'Build script executed'",
-    "start": "nodemon functions/server.js"
+    "start": "node functions/server.js",
+    "dev": "nodemon functions/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",
@@ -23,7 +27,6 @@
     "mongoose": "^8.4.1",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.3",
-    "serverless-http": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui": "^5.17.14",
     "swagger-ui-express": "^5.0.1",
