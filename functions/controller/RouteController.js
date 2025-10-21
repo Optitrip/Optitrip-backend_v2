@@ -529,6 +529,7 @@ export const getRoutesByDriverId = async (req, res) => {
  */
 export const createRoute = async (req, res) => {
     try {
+        console.log('📦 Body recibido:', JSON.stringify(req.body, null, 2));
         const {
             url,
             selectedOption,
@@ -596,7 +597,13 @@ export const createRoute = async (req, res) => {
         await newRoute.save();
         res.status(201).json({ message: "Route created successfully", route: newRoute });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('❌ Error completo:', error);
+        console.error('❌ Stack:', error.stack);
+        res.status(500).json({ 
+            message: error.message,
+            error: error.toString(),
+            stack: error.stack 
+        });
     }
 };
 
