@@ -544,6 +544,14 @@ export const createRoute = async (req, res) => {
             distance,
             durationTrip,
             status,
+            avoidAreas,
+            avoidParameters,
+            avoidHighways,
+            transportation,
+            mode,
+            traffic,
+            timeType,
+            scheduledTime
         } = req.body;
 
         const driver = await User.findById(driverId);
@@ -574,6 +582,14 @@ export const createRoute = async (req, res) => {
             distance,
             durationTrip,
             status,
+            avoidAreas: avoidAreas || [],
+            avoidParameters: avoidParameters || [],
+            avoidHighways: avoidHighways || [],
+            transportation: transportation || 'truck',
+            mode: mode || 'fast',
+            traffic: traffic !== undefined ? traffic : false,
+            timeType: timeType || 'Salir ahora',
+            scheduledTime: scheduledTime || null
         });
 
         // Guardar la nueva ruta en la base de datos

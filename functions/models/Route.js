@@ -32,7 +32,33 @@ const routeSchema = new mongoose.Schema({
     arrivalTime: { type: Date, required: true },
     distance: { type: Number, required: true },
     durationTrip: { type: String, required: true },
-    status: { type: String, required: true }
+    status: { type: String, required: true },
+    avoidAreas: [{
+        name: String,
+        points: [[Number]], // Array de [lat, lng]
+        color: String
+    }],
+    avoidParameters: [String], // ["tollRoad", "ferry", "tunnel", etc.]
+    avoidHighways: [String], // ["ET", "A", "B", "C", "D"]
+    transportation: {
+        type: String,
+        default: 'truck'
+    },
+    mode: {
+        type: String,
+        default: 'fast'
+    },
+    traffic: {
+        type: Boolean,
+        default: false
+    },
+    timeType: {
+        type: String,
+        default: 'Salir ahora'
+    },
+    scheduledTime: String
+}, {
+    timestamps: true
 }, { versionKey: false });
 
 const Route = mongoose.model('Route', routeSchema, 'routes');
