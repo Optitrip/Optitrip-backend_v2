@@ -57,9 +57,10 @@ const routeSchema = new mongoose.Schema({
         default: 'Salir ahora'
     },
     scheduledTime: String
-}, {
-    timestamps: true
-}, { versionKey: false });
+}, { 
+    timestamps: true,
+    versionKey: false 
+});
 
 const Route = mongoose.model('Route', routeSchema, 'routes');
 
