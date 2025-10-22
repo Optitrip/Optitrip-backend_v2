@@ -529,7 +529,6 @@ export const getRoutesByDriverId = async (req, res) => {
  */
 export const createRoute = async (req, res) => {
     try {
-        console.log('📦 Body recibido:', JSON.stringify(req.body, null, 2));
         const {
             url,
             selectedOption,
@@ -552,7 +551,8 @@ export const createRoute = async (req, res) => {
             mode,
             traffic,
             timeType,
-            scheduledTime
+            scheduledTime,
+            routeSections
         } = req.body;
 
         const driver = await User.findById(driverId);
@@ -590,20 +590,15 @@ export const createRoute = async (req, res) => {
             mode: mode || 'fast',
             traffic: traffic !== undefined ? traffic : false,
             timeType: timeType || 'Salir ahora',
-            scheduledTime: scheduledTime || null
+            scheduledTime: scheduledTime || null,
+            routeSections: routeSections || []
         });
 
         // Guardar la nueva ruta en la base de datos
         await newRoute.save();
         res.status(201).json({ message: "Route created successfully", route: newRoute });
     } catch (error) {
-        console.error('❌ Error completo:', error);
-        console.error('❌ Stack:', error.stack);
-        res.status(500).json({ 
-            message: error.message,
-            error: error.toString(),
-            stack: error.stack 
-        });
+        res.status(500).json({ message: error.message });
     }
 };
 
