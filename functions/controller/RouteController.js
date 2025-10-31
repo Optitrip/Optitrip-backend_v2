@@ -574,9 +574,6 @@ export const createRoute = async (req, res) => {
                 return isValid;
             });
 
-            console.log("routeSections recibidas:", routeSections.length);
-            console.log("routeSections válidas:", validRouteSections.length);
-
             validRouteSections.forEach((section, index) => {
                 console.log(`Section válida ${index}:`, {
                     polylineLength: section.polyline?.length,
