@@ -556,6 +556,36 @@ export const createRoute = async (req, res) => {
         } = req.body;
 
         const driver = await User.findById(driverId);
+        // === VALIDACIÓN DE ROUTE SECTIONS ===
+        let validRouteSections = [];
+        if (routeSections && Array.isArray(routeSections)) {
+            validRouteSections = routeSections.filter(section => {
+                // Filtrar sections con polylines muy cortos
+                const isValid = section.polyline && section.polyline.length >= 20;
+
+                if (!isValid) {
+                    console.warn("Section inválida filtrada:", {
+                        polylineLength: section.polyline?.length,
+                        departure: section.departureTime,
+                        arrival: section.arrivalTime
+                    });
+                }
+
+                return isValid;
+            });
+
+            console.log("routeSections recibidas:", routeSections.length);
+            console.log("routeSections válidas:", validRouteSections.length);
+
+            validRouteSections.forEach((section, index) => {
+                console.log(`Section válida ${index}:`, {
+                    polylineLength: section.polyline?.length,
+                    departureTime: section.departureTime,
+                    arrivalTime: section.arrivalTime
+                });
+            });
+        }
+
         if (!driver) {
             return res.status(400).json({ message: "Driver not found" });
         }
@@ -591,7 +621,7 @@ export const createRoute = async (req, res) => {
             traffic: traffic !== undefined ? traffic : false,
             timeType: timeType || 'Salir ahora',
             scheduledTime: scheduledTime || null,
-            routeSections: routeSections || []
+            routeSections: validRouteSections  || []  
         });
 
         // Guardar la nueva ruta en la base de datos
