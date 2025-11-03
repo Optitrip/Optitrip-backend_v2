@@ -50,9 +50,14 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        // Validar que los campos no estén vacíos
+        if (!email || !password) {
+            return res.status(400).json({ message: "Campos incompletos. Por favor ingresa email y contraseña" });
+        }
+
         // Buscar usuario por correo electrónico y poblar el rol
         const user = await User.findOne({ email }).populate('rol_id');
-
+        
         // Verificar si el usuario existe y si la contraseña es válida
         if (!user || !(password === user.password)) {
             return res.status(401).json({ message: "Invalid email or password" });
