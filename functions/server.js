@@ -69,9 +69,9 @@ app.get("/", (req, res) => {
 });
 
 setInterval(async () => {
-  console.log('Running tracking status update...');
+  console.log(`[${new Date().toISOString()}] Running tracking status update...`);
   await updateTrackingStatuses();
-}, 60000);
+}, 30000);
 
 const port = process.env.PORT || 5000;
 app.listen(port, '0.0.0.0', () => {

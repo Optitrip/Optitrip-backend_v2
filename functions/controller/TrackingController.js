@@ -73,6 +73,8 @@ import mongoose from 'mongoose';
  */
 export const trackDriverLocation = async (req, res) => {
     const { userId, isAuthenticated, latitude, longitude, superior_account } = req.body;
+    console.log(`[${new Date().toISOString()}] Ubicación recibida:`);
+    console.log(`  userId: ${userId}, lat: ${latitude}, lng: ${longitude}`);
 
     try {
         console.log(userId);
@@ -137,13 +139,13 @@ export const trackDriverLocation = async (req, res) => {
 export const updateTrackingStatuses = async () => {
     try {
         const now = new Date();
-        const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+        const thresholdTime = new Date(now.getTime() - 90 * 1000);
 
         // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
         const records = await Tracking.find({
             isAuthenticated: true,
             status: { $in: ['Activo', 'Inactivo'] },
-            'location.timestamp': { $lte: oneMinuteAgo }
+            'location.timestamp': { $lte: thresholdTime }
         });
 
         // Actualiza el estado de los registros encontrados
