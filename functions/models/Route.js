@@ -63,9 +63,9 @@ const routeSchema = new mongoose.Schema({
         required: true,
         validate: {
             validator: function(v) {
-                return v && v.length >= 50; 
+                return v && v.length > 0; 
             },
-            message: 'Polyline debe tener al menos 50 caracteres'
+            message: 'Polyline no puede estar vacío'
         }
     },
     departureTime: String,
