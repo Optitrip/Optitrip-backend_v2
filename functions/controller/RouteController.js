@@ -559,30 +559,21 @@ export const createRoute = async (req, res) => {
         // === VALIDACIÓN DE ROUTE SECTIONS ===
         let validRouteSections = [];
         if (routeSections && Array.isArray(routeSections)) {
-            validRouteSections = routeSections.filter(section => {
-                // Filtrar sections con polylines muy cortos
-                const isValid = section.polyline && section.polyline.length >= 20;
+            validRouteSections = routeSections;
 
-                if (!isValid) {
-                    console.warn("Section inválida filtrada:", {
-                        polylineLength: section.polyline?.length,
-                        departure: section.departureTime,
-                        arrival: section.arrivalTime
-                    });
-                }
+            console.log(`Total route sections recibidas: ${routeSections.length}`);
+            console.log(`Waypoints esperados: ${waypoints.length}`);
 
-                return isValid;
-            });
-
+            // Log solo para debug
             validRouteSections.forEach((section, index) => {
-                console.log(`Section válida ${index}:`, {
+                console.log(`Section ${index}:`, {
                     polylineLength: section.polyline?.length,
+                    distance: section.distance,
                     departureTime: section.departureTime,
                     arrivalTime: section.arrivalTime
                 });
             });
         }
-
         if (!driver) {
             return res.status(400).json({ message: "Driver not found" });
         }
@@ -618,7 +609,7 @@ export const createRoute = async (req, res) => {
             traffic: traffic !== undefined ? traffic : false,
             timeType: timeType || 'Salir ahora',
             scheduledTime: scheduledTime || null,
-            routeSections: validRouteSections  || []  
+            routeSections: validRouteSections || []
         });
 
         // Guardar la nueva ruta en la base de datos

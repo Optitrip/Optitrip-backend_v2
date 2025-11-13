@@ -57,10 +57,21 @@ const routeSchema = new mongoose.Schema({
         default: 'Salir ahora'
     },
     scheduledTime: String,
-    routeSections: {
-        type: Array,
-        default: []
-    }
+    routeSections: [{
+    polyline: {
+        type: String,
+        required: true,
+        validate: {
+            validator: function(v) {
+                return v && v.length >= 50; 
+            },
+            message: 'Polyline debe tener al menos 50 caracteres'
+        }
+    },
+    departureTime: String,
+    arrivalTime: String,
+    distance: Number
+}]
 }, { 
     timestamps: true,
     versionKey: false 
