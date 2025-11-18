@@ -1,25 +1,30 @@
 import admin from 'firebase-admin';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from 'dotenv'; 
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-// Inicializar Firebase Admin
 let serviceAccount;
+
 try {
-    const serviceAccountModule = await import(path.join(__dirname, '../config/serviceAccountKey.json'), {
-        assert: { type: 'json' }
-    });
-    serviceAccount = serviceAccountModule.default;
+    // Verificamos si existe la variable de entorno
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        // Convertimos el string comprimido de vuelta a un Objeto JSON real
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } else {
+        throw new Error('La variable de entorno FIREBASE_SERVICE_ACCOUNT no está definida.');
+    }
 } catch (error) {
-    console.error('Error loading serviceAccountKey.json:', error);
-    throw error;
+    console.error('Error crítico al cargar credenciales de Firebase:', error.message);
 }
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
+// Inicializar Firebase solo si tenemos las credenciales
+if (serviceAccount) {
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    }
+}
 
 export const sendNotification = async (fcmToken, title, body, data = {}) => {
     const message = {

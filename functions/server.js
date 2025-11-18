@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import path from 'path';
 import cron from 'node-cron';
 import './tasks/ScheduleTasks.js';
+import './tasks/ReminderTasks.js';
 import { getUsers, getUsersAdmin, getUsersDriver, getUserById, createUser, updateUser, deleteUser, updateFCMToken } from "./controller/UserController.js";
 import { resetPassword } from "./controller/ResetPasswordController.js";
 import { login } from "./controller/LoginController.js";
