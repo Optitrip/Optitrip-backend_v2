@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 
+
 /**
  * @swagger
  * /route/{codeRoute}:
@@ -618,7 +619,14 @@ export const createRoute = async (req, res) => {
         // Enviar notificación al conductor
         if (driver && driver.fcmToken) {
             const notificationTitle = "Nueva Ruta Asignada";
-            const notificationBody = `Se te ha asignado la ruta ${codeRoute}. Salida: ${new Date(departureTime).toLocaleString('es-MX')}`;
+
+            const formattedDeparture = formatInTimeZone(
+                new Date(departureTime),
+                'America/Mexico_City',
+                "dd/MM/yyyy 'a las' HH:mm"
+            );
+
+            const notificationBody = `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}`;
 
             const notificationData = {
                 type: "route_assigned",
