@@ -33,6 +33,7 @@ const routeSchema = new mongoose.Schema({
     distance: { type: Number, required: true },
     durationTrip: { type: String, required: true },
     status: { type: String, required: true },
+    reminderSent: { type: Boolean, default: false },
     avoidAreas: [{
         name: String,
         points: [[Number]], // Array de [lat, lng]
@@ -71,7 +72,6 @@ const routeSchema = new mongoose.Schema({
     departureTime: String,
     arrivalTime: String,
     distance: Number,
-    reminderSent: { type: Boolean, default: false },
 }]
 }, { 
     timestamps: true,

@@ -23,17 +23,33 @@ if (serviceAccount) {
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
+        console.log('Firebase Admin inicializado correctamente');
     }
+} else {
+    console.error('Firebase Admin NO se pudo inicializar - credenciales faltantes');
 }
 
 export const sendNotification = async (fcmToken, title, body, data = {}) => {
+    // Convertir todos los valores de data a string
+    const stringData = {};
+    for (const key in data) {
+        stringData[key] = String(data[key]);
+    }
+    
     const message = {
         notification: {
             title,
             body
         },
-        data,
-        token: fcmToken
+        data: stringData,
+        token: fcmToken,
+        android: {
+            priority: 'high',
+            notification: {
+                channelId: 'optitrip_notifications',
+                priority: 'high'
+            }
+        }
     };
 
     try {
