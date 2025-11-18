@@ -70,7 +70,8 @@ const routeSchema = new mongoose.Schema({
     },
     departureTime: String,
     arrivalTime: String,
-    distance: Number
+    distance: Number,
+    reminderSent: { type: Boolean, default: false },
 }]
 }, { 
     timestamps: true,

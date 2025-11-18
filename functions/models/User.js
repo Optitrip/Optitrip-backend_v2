@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String},
   password: { type: String},
   phone: { type: String},
+  fcmToken: { type: String },
   created_at: { type: Date, default: Date.now },
   rol_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Role' },
 }, { versionKey: false });

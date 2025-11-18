@@ -1,5 +1,6 @@
 import Route from '../models/Route.js';
 import User from '../models/User.js';
+import { sendNotification } from '../services/NotificationService.js';
 import { format, parseISO } from 'date-fns';
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
@@ -614,6 +615,20 @@ export const createRoute = async (req, res) => {
 
         // Guardar la nueva ruta en la base de datos
         await newRoute.save();
+        // Enviar notificación al conductor
+        if (driver && driver.fcmToken) {
+            const notificationTitle = "Nueva Ruta Asignada";
+            const notificationBody = `Se te ha asignado la ruta ${codeRoute}. Salida: ${new Date(departureTime).toLocaleString('es-MX')}`;
+
+            const notificationData = {
+                type: "route_assigned",
+                codeRoute: codeRoute,
+                departureTime: departureTime.toString(),
+                routeId: newRoute._id.toString()
+            };
+
+            await sendNotification(driver.fcmToken, notificationTitle, notificationBody, notificationData);
+        }
         res.status(201).json({ message: "Route created successfully", route: newRoute });
     } catch (error) {
         res.status(500).json({ message: error.message });
