@@ -532,8 +532,6 @@ export const getRoutesByDriverId = async (req, res) => {
 
 export const createRoute = async (req, res) => {
     try {
-        console.log("DATOS RECIBIDOS:", req.body);
-        console.log("DURACIÓN RECIBIDA:", req.body.duration, "TIPO:", typeof req.body.duration);
         const {
             url,
             selectedOption,
@@ -579,13 +577,13 @@ export const createRoute = async (req, res) => {
             routeStatus = "Ruta futura";
         }
 
-
         const departureTimeUTC = scheduledTime
             ? fromZonedTime(scheduledTime, 'America/Mexico_City')
             : new Date(departureTime);
 
-        const durationInMs = req.body.duration ? req.body.duration * 1000 : 0;
-        const arrivalTimeUTC = new Date(departureTimeUTC.getTime() + durationInMs);
+        const frontDurationMs = new Date(arrivalTime).getTime() - new Date(departureTime).getTime();
+
+        const arrivalTimeUTC = new Date(departureTimeUTC.getTime() + frontDurationMs);
 
 
         // === VALIDACIÓN DE ROUTE SECTIONS ===
