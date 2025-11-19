@@ -532,6 +532,8 @@ export const getRoutesByDriverId = async (req, res) => {
 
 export const createRoute = async (req, res) => {
     try {
+        console.log("DATOS RECIBIDOS:", req.body);
+        console.log("DURACIÓN RECIBIDA:", req.body.duration, "TIPO:", typeof req.body.duration);
         const {
             url,
             selectedOption,
@@ -559,7 +561,7 @@ export const createRoute = async (req, res) => {
         } = req.body;
 
         const driver = await User.findById(driverId);
-        
+
         if (!driver) {
             return res.status(400).json({ message: "Driver not found" });
         }
@@ -577,8 +579,13 @@ export const createRoute = async (req, res) => {
             routeStatus = "Ruta futura";
         }
 
-        const departureTimeUTC = fromZonedTime(new Date(departureTime), 'America/Mexico_City');
-        const arrivalTimeUTC = fromZonedTime(new Date(arrivalTime), 'America/Mexico_City');
+
+        const departureTimeUTC = scheduledTime
+            ? fromZonedTime(scheduledTime, 'America/Mexico_City')
+            : new Date(departureTime);
+
+        const durationInMs = req.body.duration ? req.body.duration * 1000 : 0;
+        const arrivalTimeUTC = new Date(departureTimeUTC.getTime() + durationInMs);
 
 
         // === VALIDACIÓN DE ROUTE SECTIONS ===
@@ -587,7 +594,7 @@ export const createRoute = async (req, res) => {
             validRouteSections = routeSections;
             console.log(`Total route sections recibidas: ${routeSections.length}`);
             console.log(`Waypoints esperados: ${waypoints.length}`);
-            
+
             validRouteSections.forEach((section, index) => {
                 console.log(`Section ${index}:`, {
                     polylineLength: section.polyline?.length,
@@ -615,11 +622,11 @@ export const createRoute = async (req, res) => {
             customerId,
             assignedBy,
             codeRoute,
-            departureTime: departureTimeUTC, 
+            departureTime: departureTimeUTC,
             arrivalTime: arrivalTimeUTC,
             distance,
             durationTrip,
-            status: routeStatus, 
+            status: routeStatus,
             avoidAreas: avoidAreas || [],
             avoidParameters: avoidParameters || [],
             avoidHighways: avoidHighways || [],
@@ -632,7 +639,7 @@ export const createRoute = async (req, res) => {
         });
 
         await newRoute.save();
-        
+
         // Enviar notificación al conductor
         if (driver && driver.fcmToken) {
             const notificationTitle = "Nueva Ruta Asignada";
@@ -648,13 +655,13 @@ export const createRoute = async (req, res) => {
             const notificationData = {
                 type: "route_assigned",
                 codeRoute: codeRoute,
-                departureTime: departureTimeUTC.toISOString(), 
+                departureTime: departureTimeUTC.toISOString(),
                 routeId: newRoute._id.toString()
             };
 
             await sendNotification(driver.fcmToken, notificationTitle, notificationBody, notificationData);
         }
-        
+
         res.status(201).json({ message: "Route created successfully", route: newRoute });
     } catch (error) {
         res.status(500).json({ message: error.message });
