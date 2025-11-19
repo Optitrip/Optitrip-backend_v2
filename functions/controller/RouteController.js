@@ -529,6 +529,7 @@ export const getRoutesByDriverId = async (req, res) => {
  *                 message:
  *                   type: string
  */
+
 export const createRoute = async (req, res) => {
     try {
         const {
@@ -558,15 +559,35 @@ export const createRoute = async (req, res) => {
         } = req.body;
 
         const driver = await User.findById(driverId);
+        
+        if (!driver) {
+            return res.status(400).json({ message: "Driver not found" });
+        }
+
+        let routeStatus = status || "Ruta no iniciada";
+        const currentDateTime = new Date();
+        const departureDateMexico = toZonedTime(new Date(departureTime), 'America/Mexico_City');
+        const currentDateMexico = toZonedTime(currentDateTime, 'America/Mexico_City');
+
+        // Truncar horas para comparar solo fechas
+        const currentDateOnly = new Date(currentDateMexico.getFullYear(), currentDateMexico.getMonth(), currentDateMexico.getDate());
+        const departureDateOnly = new Date(departureDateMexico.getFullYear(), departureDateMexico.getMonth(), departureDateMexico.getDate());
+
+        if (departureDateOnly > currentDateOnly) {
+            routeStatus = "Ruta futura";
+        }
+
+        const departureTimeUTC = fromZonedTime(new Date(departureTime), 'America/Mexico_City');
+        const arrivalTimeUTC = fromZonedTime(new Date(arrivalTime), 'America/Mexico_City');
+
+
         // === VALIDACIÓN DE ROUTE SECTIONS ===
         let validRouteSections = [];
         if (routeSections && Array.isArray(routeSections)) {
             validRouteSections = routeSections;
-
             console.log(`Total route sections recibidas: ${routeSections.length}`);
             console.log(`Waypoints esperados: ${waypoints.length}`);
-
-            // Log solo para debug
+            
             validRouteSections.forEach((section, index) => {
                 console.log(`Section ${index}:`, {
                     polylineLength: section.polyline?.length,
@@ -576,9 +597,6 @@ export const createRoute = async (req, res) => {
                 });
             });
         }
-        if (!driver) {
-            return res.status(400).json({ message: "Driver not found" });
-        }
 
         // Generar codeRoute
         const timestamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15);
@@ -586,7 +604,6 @@ export const createRoute = async (req, res) => {
         const driverInitial = driver.name.charAt(0).toUpperCase();
         const codeRoute = `${timestamp}-${assignedByInitial}-${driverInitial}`;
 
-        // Crear nueva ruta
         const newRoute = new Route({
             url,
             selectedOption,
@@ -598,11 +615,11 @@ export const createRoute = async (req, res) => {
             customerId,
             assignedBy,
             codeRoute,
-            departureTime,
-            arrivalTime,
+            departureTime: departureTimeUTC, 
+            arrivalTime: arrivalTimeUTC,
             distance,
             durationTrip,
-            status,
+            status: routeStatus, 
             avoidAreas: avoidAreas || [],
             avoidParameters: avoidParameters || [],
             avoidHighways: avoidHighways || [],
@@ -614,14 +631,14 @@ export const createRoute = async (req, res) => {
             routeSections: validRouteSections || []
         });
 
-        // Guardar la nueva ruta en la base de datos
         await newRoute.save();
+        
         // Enviar notificación al conductor
         if (driver && driver.fcmToken) {
             const notificationTitle = "Nueva Ruta Asignada";
 
             const formattedDeparture = formatInTimeZone(
-                new Date(departureTime),
+                departureTimeUTC,
                 'America/Mexico_City',
                 "dd/MM/yyyy 'a las' HH:mm"
             );
@@ -631,12 +648,13 @@ export const createRoute = async (req, res) => {
             const notificationData = {
                 type: "route_assigned",
                 codeRoute: codeRoute,
-                departureTime: departureTime.toString(),
+                departureTime: departureTimeUTC.toISOString(), 
                 routeId: newRoute._id.toString()
             };
 
             await sendNotification(driver.fcmToken, notificationTitle, notificationBody, notificationData);
         }
+        
         res.status(201).json({ message: "Route created successfully", route: newRoute });
     } catch (error) {
         res.status(500).json({ message: error.message });
