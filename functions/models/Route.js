@@ -34,6 +34,7 @@ const routeSchema = new mongoose.Schema({
     durationTrip: { type: String, required: true },
     status: { type: String, required: true },
     reminderSent: { type: Boolean, default: false },
+    startNotificationSent: { type: Boolean, default: false },
     avoidAreas: [{
         name: String,
         points: [[Number]], // Array de [lat, lng]

@@ -633,7 +633,9 @@ export const createRoute = async (req, res) => {
             traffic: traffic !== undefined ? traffic : false,
             timeType: timeType || 'Salir ahora',
             scheduledTime: scheduledTime || null,
-            routeSections: validRouteSections || []
+            routeSections: validRouteSections || [],
+            reminderSent: false,  
+            startNotificationSent: false  
         });
 
         await newRoute.save();
