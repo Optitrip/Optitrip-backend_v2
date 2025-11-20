@@ -637,6 +637,7 @@ export const createRoute = async (req, res) => {
             reminderSent: false,  
             startNotificationSent: false  
         });
+        
 
         await newRoute.save();
 
