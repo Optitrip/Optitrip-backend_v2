@@ -312,6 +312,50 @@ export const getRoutesByDriverId = async (req, res) => {
     }
 };
 
+/**
+ * @swagger
+ * /route/driver/{driverId}/history:
+ *   get:
+ *     summary: Retrieve completed and expired routes by driver ID
+ *     description: Retrieve only completed and expired routes by driver ID from the database
+ *     parameters:
+ *       - in: path
+ *         name: driverId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the driver whose history routes to retrieve
+ *     operationId: getHistoryRoutesByDriverId
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *       404:
+ *         description: Routes not found
+ *       500:
+ *         description: Internal server error
+ */
+export const getHistoryRoutesByDriverId = async (req, res) => {
+    try {
+        const { driverId } = req.params;
+
+        // Filtrar rutas por driverId y solo las completadas o vencidas
+        const routes = await Route.find({
+            driverId,
+            status: { $in: ["Completado", "Ruta vencida"] }
+        })
+        .populate(['driverId', 'customerId'])
+        .sort({ createdAt: -1 }); // Ordenar por más recientes primero
+
+        if (!routes || routes.length === 0) {
+            return res.status(404).json({ message: "No history routes found" });
+        }
+        
+        res.json(routes);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 /**
  * @swagger
