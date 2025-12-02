@@ -341,7 +341,7 @@ export const getHistoryRoutesByDriverId = async (req, res) => {
         // Filtrar rutas por driverId y solo las completadas o vencidas
         const routes = await Route.find({
             driverId,
-            status: { $in: ["Completado", "Ruta vencida"] }
+            status: { $in: ["Completado", "Ruta vencida", "Ruta expirada"] }
         })
         .populate(['driverId', 'customerId'])
         .sort({ createdAt: -1 }); // Ordenar por más recientes primero
