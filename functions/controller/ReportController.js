@@ -134,37 +134,41 @@ export const getReportDetailsByDriver = async (req, res) => {
 export const getReportDetailsByStatus = async (req, res) => {
     const { startDate, endDate, userId, status } = req.body;
 
-    // Verificar campos requeridos
-    if (!startDate || !endDate || !userId) {
+    // Verificar campos requeridos (userId ahora es opcional)
+    if (!startDate || !endDate) {
         return res.status(200).json({
             error: 'Missing required fields',
-            results: []  // Retornar un array vacío para los resultados
+            results: []
         });
     }
 
     try {
-        // Construir el filtro de consulta basado en el estado si se proporciona
+        // Construir el filtro de consulta
         const queryFilter = {
-            driverId: userId,
             departureTime: { $gte: new Date(startDate) },
             arrivalTime: { $lte: new Date(endDate) }
         };
 
-        if (status) {
+        // Agregar filtro de conductor solo si se proporciona
+        if (userId && userId !== "") {
+            queryFilter.driverId = userId;
+        }
+
+        // Agregar filtro de estado solo si se proporciona
+        if (status && status !== "") {
             queryFilter.status = status;
         }
 
-        // Buscar las rutas basadas en el ID del usuario, fechas y estado (si se proporciona), ordenadas por departureTime
+        // Buscar las rutas con populate para obtener el nombre del conductor
         const routes = await Route.find(queryFilter)
-            .sort({ departureTime: 1 }); // Ordenar de la menos reciente a la más reciente
+            .populate('driverId')  
+            .sort({ departureTime: 1 });
 
-        // Buscar el usuario para obtener el nombre del conductor
-        const driver = await User.findById(userId);
-
-        // Procesar cada ruta y calcular los datos necesarios
+        // Procesar cada ruta
         const results = routes.map(route => {
             return {
-                driverName: driver ? driver.name : 'Unknown',
+                routeId: route._id,
+                driverName: route.driverId ? route.driverId.name : 'Unknown',  
                 codeRoute: route.codeRoute,
                 originName: route.origin.name,
                 departureTime: route.departureTime,
@@ -177,7 +181,6 @@ export const getReportDetailsByStatus = async (req, res) => {
             };
         });
 
-        // Retornar los resultados
         res.status(200).json({
             results
         });

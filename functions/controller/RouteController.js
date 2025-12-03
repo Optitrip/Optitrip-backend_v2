@@ -157,6 +157,21 @@ export const getRouteByCodeRoute = async (req, res) => {
     }
 };
 
+export const getRouteById = async (req, res) => {
+    try {
+        const { routeId } = req.params;
+
+        const route = await Route.findById(routeId).populate(['driverId', 'customerId']);
+
+        if (!route) {
+            return res.status(404).json({ message: "Route not found" });
+        }
+
+        res.json(route);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 /**
  * @swagger
@@ -343,13 +358,13 @@ export const getHistoryRoutesByDriverId = async (req, res) => {
             driverId,
             status: { $in: ["Completado", "Ruta vencida", "Ruta expirada"] }
         })
-        .populate(['driverId', 'customerId'])
-        .sort({ createdAt: -1 }); // Ordenar por más recientes primero
+            .populate(['driverId', 'customerId'])
+            .sort({ createdAt: -1 }); // Ordenar por más recientes primero
 
         if (!routes || routes.length === 0) {
             return res.status(404).json({ message: "No history routes found" });
         }
-        
+
         res.json(routes);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -678,10 +693,10 @@ export const createRoute = async (req, res) => {
             timeType: timeType || 'Salir ahora',
             scheduledTime: scheduledTime || null,
             routeSections: validRouteSections || [],
-            reminderSent: false,  
-            startNotificationSent: false  
+            reminderSent: false,
+            startNotificationSent: false
         });
-        
+
 
         await newRoute.save();
 
@@ -861,3 +876,55 @@ export const updateRouteStatus = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const updateRoute = async (req, res) => {
+    try {
+        const { routeId } = req.params;
+        const updateData = req.body;
+
+        // Buscar la ruta actual para comparar el conductor
+        const currentRoute = await Route.findById(routeId);
+        
+        if (!currentRoute) {
+            return res.status(404).json({ message: "Route not found" });
+        }
+
+        // Actualizar la ruta con los nuevos datos
+        const updatedRoute = await Route.findByIdAndUpdate(
+            routeId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        ).populate(['driverId', 'customerId']);
+
+        // Si cambió el conductor, enviar notificación al nuevo conductor
+        if (updateData.driverId && updateData.driverId !== currentRoute.driverId.toString()) {
+            const newDriver = await User.findById(updateData.driverId);
+            
+            if (newDriver && newDriver.fcmToken) {
+                const notificationTitle = "Ruta Reasignada";
+                const formattedDeparture = formatInTimeZone(
+                    updatedRoute.departureTime,
+                    'America/Mexico_City',
+                    "dd/MM/yyyy 'a las' HH:mm"
+                );
+                const notificationBody = `Se te ha reasignado la ruta ${updatedRoute.codeRoute}. Salida: ${formattedDeparture}`;
+                const notificationData = {
+                    type: "route_reassigned",
+                    codeRoute: updatedRoute.codeRoute,
+                    departureTime: updatedRoute.departureTime.toISOString(),
+                    routeId: updatedRoute._id.toString()
+                };
+
+                await sendNotification(newDriver.fcmToken, notificationTitle, notificationBody, notificationData);
+            }
+        }
+
+        res.status(200).json({ 
+            message: "Route updated successfully", 
+            route: updatedRoute 
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
