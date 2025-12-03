@@ -81,9 +81,27 @@ export const createTask = async (req, res) => {
             deliveryStatus,
             comments,
             codeRoute,
-            pointName,
+            point,
             images
         } = req.body;
+
+        if (!point) {
+             return res.status(400).json({ message: "Field 'point' is required" });
+        }
+
+        let pointArray;
+        try {
+            pointArray = JSON.parse(point); 
+        } catch (error) {
+            throw new Error("Invalid JSON format for point: " + error);
+        }
+
+        // Obtenemos el nombre desde el array parseado
+        const pointNameFromData = pointArray[0] ? pointArray[0].name : null;
+
+        if (!pointNameFromData) {
+            return res.status(400).json({ message: "Point name is missing inside point object" });
+        }
 
         // Verifica que images sea un string
         if (typeof images !== 'string') {
@@ -126,22 +144,32 @@ export const createTask = async (req, res) => {
 
         // Encuentra y actualiza el punto
         let pointUpdated = false;
-        const updatePointStatus = (point) => {
-            if (point.name === pointName) {
-                point.status = "Completado";
+        
+        const updatePointStatus = (pointItem) => {
+            if (pointItem && pointItem.name === pointNameFromData) {
+                pointItem.status = "Completado";
                 pointUpdated = true;
             }
         };
 
-        route.waypoints.forEach(updatePointStatus);
-        updatePointStatus(route.destination);
+        if (route.waypoints) {
+            route.waypoints.forEach(updatePointStatus);
+        }
+        
+        if (route.destination) {
+            updatePointStatus(route.destination);
+        }
 
         if (!pointUpdated) {
-            return res.status(400).json({ message: "Point name not found in the route" });
+            return res.status(400).json({ message: `Point name '${pointNameFromData}' not found in the route` });
         }
 
         // Verificar si todos los waypoints y el destino tienen el estado "Completado"
-        const allPointsCompleted = [...route.waypoints, route.destination].every(point => point.status === "Completado");
+        const allPointsToCheck = [...(route.waypoints || [])];
+        if (route.destination) allPointsToCheck.push(route.destination);
+        
+        const allPointsCompleted = allPointsToCheck.every(p => p.status === "Completado");
+        
         if (allPointsCompleted) {
             route.status = "Completado";
         }
@@ -154,6 +182,7 @@ export const createTask = async (req, res) => {
             images: normalizedImagesArray, // Almacenar las imágenes tal cual vienen
             comments,
             codeRoute,
+            point: pointArray,
             createdAt
         });
 
@@ -168,6 +197,7 @@ export const createTask = async (req, res) => {
         // Responde con un código 201 y la tarea creada
         res.status(201).json({ message: "Task created successfully", task: newTask });
     } catch (error) {
+        console.error("Error en createTask:", error);
         // Maneja los errores y responde con un código 500 en caso de error interno del servidor
         res.status(500).json({ message: error.message });
     }
