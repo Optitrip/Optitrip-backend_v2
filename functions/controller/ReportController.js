@@ -161,14 +161,14 @@ export const getReportDetailsByStatus = async (req, res) => {
 
         // Buscar las rutas con populate para obtener el nombre del conductor
         const routes = await Route.find(queryFilter)
-            .populate('driverId')  
+            .populate('driverId')
             .sort({ departureTime: 1 });
 
         // Procesar cada ruta
         const results = routes.map(route => {
             return {
                 routeId: route._id,
-                driverName: route.driverId ? route.driverId.name : 'Unknown',  
+                driverName: route.driverId ? route.driverId.name : 'Unknown',
                 codeRoute: route.codeRoute,
                 originName: route.origin.name,
                 departureTime: route.departureTime,
@@ -318,6 +318,8 @@ export const getReportDetailsByCodeRoute = async (req, res) => {
                 comments: task.comments,
                 images: task.images,
                 point: task.point,
+                deliveryStatus: task.deliveryStatus, 
+                createdAt: task.createdAt,
             };
         });
 
