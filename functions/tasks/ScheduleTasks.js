@@ -1,66 +1,57 @@
 import cron from 'node-cron';
 import Route from '../models/Route.js';
 
-// Función para actualizar el estado de las rutas
 const updateRouteStatus = async () => {
     try {
+        // Obtenemos la fecha actual
         const now = new Date();
 
-        // startOfDay: Inicio de hoy (00:00:00)
-        const startOfDay = new Date(now);
-        startOfDay.setHours(0, 0, 0, 0);
-
-        // endOfDay: Final de hoy (23:59:59)
+        // DE "Ruta futura" A "Ruta no iniciada"    
         const endOfDay = new Date(now);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // fiveDaysAgo: Hace 5 días exactos
-        const fiveDaysAgo = new Date(now);
-        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-
-        const oneDayAgo = new Date(now);
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-
-
         await Route.updateMany(
             {
-                departureTime: { $gte: startOfDay, $lt: endOfDay },
+                departureTime: { $lte: endOfDay }, // Menor o igual a hoy (incluye pasado)
                 status: "Ruta futura"
             },
             { $set: { status: "Ruta no iniciada" } }
         );
 
-        // Cambiar rutas no iniciadas a "Ruta expirada" después de 1 día
+        // DE "Ruta no iniciada" A "Ruta expirada"        
+        const expirationThreshold = new Date(now);
+        expirationThreshold.setHours(expirationThreshold.getHours() - 12); // 12 horas de tolerancia
+
         await Route.updateMany(
             {
-                departureTime: { $lt: oneDayAgo },
-                status: { $in: ["Ruta no iniciada"] }
+                departureTime: { $lt: expirationThreshold },
+                status: "Ruta no iniciada"
             },
             { $set: { status: "Ruta expirada" } }
         );
 
+        // DE "Ruta en curso" A "Ruta vencida" (Abandono)
+        const fiveDaysAgo = new Date(now);
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
 
-        // Si ya pasaron 5 días de la salida y sigue en curso, asumimos que se abandonó.
         await Route.updateMany(
             {
                 departureTime: { $lt: fiveDaysAgo },
-                status: { $in: ["Ruta en curso"] }
+                status: "Ruta en curso"
             },
             { $set: { status: "Ruta vencida" } }
         );
 
-        console.log(`[${new Date().toISOString()}] Route status update task completed.`);
+        console.log(`[${new Date().toISOString()}] Estatus de rutas actualizados.`);
 
     } catch (error) {
-        console.error('Error updating route status:', error);
+        console.error('Error actualizando estatus:', error);
     }
 };
 
-// Programar la tarea para las 00:00
-cron.schedule('0 0 * * *', () => {
-    console.log('Running daily route status update...');
+cron.schedule('0 * * * *', () => { 
+    console.log('Running hourly route status check...');
     updateRouteStatus();
 }, {
-    timezone: "America/Mexico_City" // Recomendado para asegurar que las 00:00 sean hora local
+    timezone: "America/Mexico_City"
 });
