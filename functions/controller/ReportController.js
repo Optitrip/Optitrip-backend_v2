@@ -1,7 +1,7 @@
 import Route from '../models/Route.js';
 import User from '../models/User.js';
 import Task from '../models/Task.js';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 // Función para convertir duración a minutos
 const convertDurationToMinutes = (duration) => {
@@ -62,11 +62,14 @@ export const getReportDetailsByDriver = async (req, res) => {
     }
 
     try {
+        const timeZone = 'America/Mexico_City';
+        const utcStartDate = fromZonedTime(startDate, timeZone);
+        const utcEndDate = fromZonedTime(endDate, timeZone);
         // Buscar las rutas basadas en el ID del usuario y las fechas
         const routes = await Route.find({
             driverId: userId,
-            departureTime: { $gte: new Date(startDate) },
-            arrivalTime: { $lte: new Date(endDate) },
+            departureTime: { $gte: utcStartDate },
+            arrivalTime: { $lte: utcEndDate },
             status: "Completado"
         });
 
@@ -143,10 +146,13 @@ export const getReportDetailsByStatus = async (req, res) => {
     }
 
     try {
+        const timeZone = 'America/Mexico_City';
+        const utcStartDate = fromZonedTime(startDate, timeZone);
+        const utcEndDate = fromZonedTime(endDate, timeZone);
         // Construir el filtro de consulta
         const queryFilter = {
-            departureTime: { $gte: new Date(startDate) },
-            arrivalTime: { $lte: new Date(endDate) }
+            departureTime: { $gte: utcStartDate }, 
+            arrivalTime: { $lte: utcEndDate }     
         };
 
         // Agregar filtro de conductor solo si se proporciona
@@ -203,11 +209,14 @@ export const getReportDetailsByCustomer = async (req, res) => {
     }
 
     try {
+        const timeZone = 'America/Mexico_City';
+        const utcStartDate = fromZonedTime(startDate, timeZone);
+        const utcEndDate = fromZonedTime(endDate, timeZone);
         // Buscar las rutas basadas en el ID del usuario y las fechas
         const routes = await Route.find({
             customerId: userId,
-            departureTime: { $gte: new Date(startDate) },
-            arrivalTime: { $lte: new Date(endDate) },
+            departureTime: { $gte: utcStartDate },
+            arrivalTime: { $lte: utcEndDate },
             status: "Completado"
         });
 
@@ -318,7 +327,7 @@ export const getReportDetailsByCodeRoute = async (req, res) => {
                 comments: task.comments,
                 images: task.images,
                 point: task.point,
-                deliveryStatus: task.deliveryStatus, 
+                deliveryStatus: task.deliveryStatus,
                 createdAt: task.createdAt,
             };
         });
