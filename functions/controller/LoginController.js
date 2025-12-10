@@ -50,23 +50,18 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validar que los campos no estén vacíos
         if (!email || !password) {
-            return res.status(400).json({ message: "Campos incompletos. Por favor ingresa email y contraseña" });
+            return res.status(400).json({ message: "Campos incompletos" });
         }
 
-        // Buscar usuario por correo electrónico y poblar el rol
         const user = await User.findOne({ email }).populate('rol_id');
         
-        // Verificar si el usuario existe y si la contraseña es válida
         if (!user || !(password === user.password)) {
-            return res.status(401).json({ message: "Invalid email or password" });
+            return res.status(401).json({ message: "Credenciales inválidas" });
         }
 
-        // Crear token de autenticación
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        // Enviar el token y el usuario como respuesta
         res.json({
             token,
             user: {
@@ -74,7 +69,8 @@ export const login = async (req, res) => {
                 superior_account: user.superior_account,
                 email: user.email,
                 name: user.name,
-                role: user.rol_id.name // Assuming the role's name field is 'name'
+                type_user: user.type_user, 
+                role: user.rol_id.name
             }
         });
     } catch (error) {

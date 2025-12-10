@@ -1,6 +1,8 @@
+// functions/controller/UserController.js
 import User from "../models/User.js";
 import Role from "../models/Role.js";
 import Tracking from "../models/Tracking.js";
+import { canCreateRole, validateNoCircularReference, ROLE_PERMISSIONS, getScopeFilter } from '../utils/HierarchyUtils.js';
 
 /**
  * @swagger
@@ -41,9 +43,27 @@ import Tracking from "../models/Tracking.js";
  */
 export const getUsers = async (req, res) => {
   try {
-    const users = await User.find().populate("rol_id");
+    const { requestingUserId } = req.query; // ID del usuario que solicita
+    
+    if (!requestingUserId) {
+      return res.status(400).json({ message: "requestingUserId es requerido" });
+    }
+    
+    // Obtener usuario solicitante
+    const requestingUser = await User.findById(requestingUserId);
+    if (!requestingUser) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    
+    // Obtener filtro basado en su scope
+    const scopeFilter = await getScopeFilter(requestingUser);
+    
+    // Consultar usuarios dentro de su scope
+    const users = await User.find(scopeFilter).populate("rol_id");
+    
     res.json(users);
   } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -311,35 +331,104 @@ export const getUserById = async (req, res) => {
  */
 export const createUser = async (req, res) => {
   try {
-    const {
-      superior_account,
-      type_user,
-      name,
-      email,
-      password,
-      phone,
+    const { 
+      superior_account, 
+      type_user, 
+      name, 
+      email, 
+      password, 
+      phone, 
       rol_id,
+      created_by_id 
     } = req.body;
 
-    // Check if email already exists
+    // VALIDACIÓN 1: Email único
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // Create new user
+    // VALIDACIÓN 2: Obtener usuario creador
+    if (!created_by_id) {
+      return res.status(400).json({ message: "created_by_id es requerido" });
+    }
+    
+    const creator = await User.findById(created_by_id).populate('rol_id');
+    if (!creator) {
+      return res.status(404).json({ message: "Usuario creador no encontrado" });
+    }
+
+    // VALIDACIÓN 3: Verificar permisos de creación
+    const creatorRole = creator.type_user;
+    if (!canCreateRole(creatorRole, type_user)) {
+      return res.status(403).json({ 
+        message: `Un ${creatorRole} no puede crear usuarios tipo ${type_user}`,
+        allowed: ROLE_PERMISSIONS[creatorRole]?.canCreate || []
+      });
+    }
+
+    // VALIDACIÓN 4: Superior account correcto
+    let finalSuperiorAccount = superior_account;
+    
+    if (creatorRole === 'Super Administrador') {
+      if (type_user === 'Distribuidor' || type_user === 'Administrador') {
+        finalSuperiorAccount = superior_account || null;
+      } else {
+        // Cliente/Conductor necesitan superior
+        if (!superior_account) {
+          return res.status(400).json({ 
+            message: `${type_user} debe tener una cuenta superior` 
+          });
+        }
+      }
+    } else {
+      finalSuperiorAccount = creator.email;
+    }
+
+    // VALIDACIÓN 5: No referencias circulares
+    if (finalSuperiorAccount) {
+      await validateNoCircularReference(finalSuperiorAccount, email);
+    }
+
+    // VALIDACIÓN 6: Mapeo de rol_id
+    const roleMap = {
+      'Super Administrador': '666c6751e3bcd90408e8c108',
+      'Distribuidor': '6939a3190e7accac1da2c079',
+      'Administrador': '665a3fa1b9397c6a4a0756cd',
+      'Cliente': '666744007348f2ae62817a74',
+      'Conductor': '6677d0702c684374a602531d'
+    };
+    
+    const finalRolId = rol_id || roleMap[type_user];
+    if (!finalRolId) {
+      return res.status(400).json({ message: "Rol no válido" });
+    }
+
     const newUser = new User({
-      superior_account,
+      superior_account: finalSuperiorAccount,
       type_user,
       name,
       email,
       password,
       phone,
-      rol_id,
+      rol_id: finalRolId,
+      created_by: created_by_id
     });
+    
     await newUser.save();
-    res.status(201).json({ message: "User created successfully" });
+    
+    res.status(201).json({ 
+      message: "User created successfully",
+      user: {
+        _id: newUser._id,
+        email: newUser.email,
+        type_user: newUser.type_user,
+        superior_account: newUser.superior_account
+      }
+    });
+    
   } catch (error) {
+    console.error('Error creating user:', error);
     res.status(500).json({ message: error.message });
   }
 };
