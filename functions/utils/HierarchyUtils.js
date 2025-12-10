@@ -85,7 +85,7 @@ export async function getScopeFilter(user) {
 
         case 'hierarchical':
             // Distribuidor ve su árbol completo
-            const hierarchy = getUserHierarchy(user.email);
+            const hierarchy = await getUserHierarchy(user.email);
             return {
                 $or: [
                     { superior_account: { $in: hierarchy } },
@@ -95,7 +95,12 @@ export async function getScopeFilter(user) {
 
         case 'direct':
             // Administrador solo ve sus hijos directos
-            return { superior_account: user.email };
+            return { 
+                $or: [
+                    { superior_account: user.email }, // Sus empleados
+                    { _id: user._id }                 // Él mismo (para que cargue el panel superior)
+                ]
+            };
 
         case 'self':
             // Cliente/Conductor solo se ve a sí mismo
