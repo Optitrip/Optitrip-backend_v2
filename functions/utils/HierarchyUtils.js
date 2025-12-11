@@ -119,7 +119,8 @@ export async function getScopeFilter(user) {
 export async function validateNoCircularReference(superiorEmail, targetEmail) {
     if (!superiorEmail) return true;
 
-    const hierarchy = getUserHierarchy(targetEmail);
+    const hierarchy = await getUserHierarchy(targetEmail);
+    
     if (hierarchy.includes(superiorEmail)) {
         throw new Error('No se puede crear una referencia circular en la jerarquía');
     }
