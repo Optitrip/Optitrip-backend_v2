@@ -16,6 +16,14 @@ const assignedBySchema = new mongoose.Schema({
     email: { type: String, required: true },
 }, { _id: false });
 
+const deviationSchema = new mongoose.Schema({
+    type: { type: String, required: true },
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
+    timestamp: { type: Date, default: Date.now },
+    seenByAdmin: { type: Boolean, default: false }
+}, { _id: false });
+
 const routeSchema = new mongoose.Schema({
     url: { type: String, required: true },
     selectedOption: { type: Number, required: true },
