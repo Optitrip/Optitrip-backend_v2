@@ -928,3 +928,61 @@ export const updateRoute = async (req, res) => {
     }
 };
 
+export const reportRouteDeviation = async (req, res) => {
+    try {
+        const { codeRoute } = req.params;
+        const { type, lat, lng } = req.body;
+
+        const route = await Route.findOne({ codeRoute });
+
+        if (!route) {
+            return res.status(404).json({ message: "Route not found" });
+        }
+
+        route.deviations.push({
+            type, 
+            lat,
+            lng,
+            timestamp: new Date(),
+            seenByAdmin: false
+        });
+
+        await route.save();
+
+        res.status(200).json({ message: "Deviation reported successfully" });
+    } catch (error) {
+        console.error("Error reporting deviation:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const getPendingDeviations = async (req, res) => {
+    try {
+        const routes = await Route.find({
+            "deviations.seenByAdmin": false
+        }).populate(['driverId']);
+
+        let alerts = [];
+
+        routes.forEach(route => {
+            route.deviations.forEach(dev => {
+                if (!dev.seenByAdmin) {
+                    alerts.push({
+                        routeId: route._id,
+                        codeRoute: route.codeRoute,
+                        driverName: route.driverId ? route.driverId.name : "Desconocido",
+                        type: dev.type,
+                        timestamp: dev.timestamp,
+                        lat: dev.lat,
+                        lng: dev.lng
+                    });
+                }
+            });
+        });
+
+        res.json(alerts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
