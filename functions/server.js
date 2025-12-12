@@ -11,9 +11,9 @@ import { resetPassword } from "./controller/ResetPasswordController.js";
 import { login } from "./controller/LoginController.js";
 import { swaggerUi, specs } from "./swagger.js";
 import { moveAccount } from "./controller/MoveAccount.js";
-import { getRouteByCodeRoute, getRoutesByDriverId, getHistoryRoutesByDriverId, createRoute, updateRouteStatus, getRouteById, updateRoute, reportRouteDeviation, getPendingDeviations } from "./controller/RouteController.js";
+import { getRouteByCodeRoute, getRoutesByDriverId, getHistoryRoutesByDriverId, createRoute, updateRouteStatus, getRouteById, updateRoute, reportRouteDeviation, getPendingDeviations, markDeviationAsSeen} from "./controller/RouteController.js";
 import { createTask } from "./controller/TaskController.js";
-import { getReportDetailsByDriver, getReportDetailsByStatus, getReportDetailsByCustomer, getReportDetailsByCodeRoute, markDeviationAsSeen } from "./controller/ReportController.js";
+import { getReportDetailsByDriver, getReportDetailsByStatus, getReportDetailsByCustomer, getReportDetailsByCodeRoute} from "./controller/ReportController.js";
 import { trackDriverLocation, updateTrackingStatuses } from "./controller/TrackingController.js";
 import multer from 'multer';
 
