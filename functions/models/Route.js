@@ -22,7 +22,7 @@ const deviationSchema = new mongoose.Schema({
     lng: { type: Number, required: true },
     timestamp: { type: Date, default: Date.now },
     seenByAdmin: { type: Boolean, default: false }
-}); 
+});
 
 const routeSchema = new mongoose.Schema({
     url: { type: String, required: true },
@@ -69,23 +69,33 @@ const routeSchema = new mongoose.Schema({
     },
     scheduledTime: String,
     routeSections: [{
-    polyline: {
-        type: String,
-        required: true,
-        validate: {
-            validator: function(v) {
-                return v && v.length > 0; 
-            },
-            message: 'Polyline no puede estar vacío'
-        }
+        polyline: {
+            type: String,
+            required: true,
+            validate: {
+                validator: function (v) {
+                    return v && v.length > 0;
+                },
+                message: 'Polyline no puede estar vacío'
+            }
+        },
+        departureTime: String,
+        arrivalTime: String,
+        distance: Number,
+    }],
+    deviationAlertEnabled: {
+        type: Boolean,
+        default: false
     },
-    departureTime: String,
-    arrivalTime: String,
-    distance: Number,
-}]
-}, { 
+    deviationAlertDistance: {
+        type: Number,
+        default: 50, // 50 metros por defecto
+        min: 10,
+        max: 1000
+    }
+}, {
     timestamps: true,
-    versionKey: false 
+    versionKey: false
 });
 
 const Route = mongoose.model('Route', routeSchema, 'routes');

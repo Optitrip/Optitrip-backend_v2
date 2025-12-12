@@ -614,7 +614,9 @@ export const createRoute = async (req, res) => {
             traffic,
             timeType,
             scheduledTime,
-            routeSections
+            routeSections,
+            deviationAlertEnabled,
+            deviationAlertDistance
         } = req.body;
 
         const driver = await User.findById(driverId);
@@ -694,7 +696,9 @@ export const createRoute = async (req, res) => {
             scheduledTime: scheduledTime || null,
             routeSections: validRouteSections || [],
             reminderSent: false,
-            startNotificationSent: false
+            startNotificationSent: false,
+            deviationAlertEnabled: deviationAlertEnabled || false,
+            deviationAlertDistance: deviationAlertDistance || 50
         });
 
 
@@ -884,7 +888,7 @@ export const updateRoute = async (req, res) => {
 
         // Buscar la ruta actual para comparar el conductor
         const currentRoute = await Route.findById(routeId);
-        
+
         if (!currentRoute) {
             return res.status(404).json({ message: "Route not found" });
         }
@@ -899,7 +903,7 @@ export const updateRoute = async (req, res) => {
         // Si cambió el conductor, enviar notificación al nuevo conductor
         if (updateData.driverId && updateData.driverId !== currentRoute.driverId.toString()) {
             const newDriver = await User.findById(updateData.driverId);
-            
+
             if (newDriver && newDriver.fcmToken) {
                 const notificationTitle = "Ruta Reasignada";
                 const formattedDeparture = formatInTimeZone(
@@ -919,9 +923,9 @@ export const updateRoute = async (req, res) => {
             }
         }
 
-        res.status(200).json({ 
-            message: "Route updated successfully", 
-            route: updatedRoute 
+        res.status(200).json({
+            message: "Route updated successfully",
+            route: updatedRoute
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -940,7 +944,7 @@ export const reportRouteDeviation = async (req, res) => {
         }
 
         route.deviations.push({
-            type, 
+            type,
             lat,
             lng,
             timestamp: new Date(),
