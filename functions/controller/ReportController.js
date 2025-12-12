@@ -63,12 +63,16 @@ export const getReportDetailsByDriver = async (req, res) => {
 
     try {
         const timeZone = 'America/Mexico_City';
-        const utcStartDate = fromZonedTime(startDate, timeZone);
-        const utcEndDate = fromZonedTime(endDate, timeZone);
+        const fullStartDate = `${startDate}T00:00:00`;
+        const fullEndDate = `${endDate}T23:59:59`;
+
+        const utcStartDate = fromZonedTime(fullStartDate, timeZone);
+        const utcEndDate = fromZonedTime(fullEndDate, timeZone);
         // Buscar las rutas basadas en el ID del usuario y las fechas
         const routes = await Route.find({
             driverId: userId,
-            departureTime: { $gte: utcStartDate, $lte: utcEndDate },
+            departureTime: { $gte: utcStartDate },
+            arrivalTime: { $lte: utcEndDate },
             status: "Completado"
         });
 
@@ -146,11 +150,15 @@ export const getReportDetailsByStatus = async (req, res) => {
 
     try {
         const timeZone = 'America/Mexico_City';
-        const utcStartDate = fromZonedTime(startDate, timeZone);
-        const utcEndDate = fromZonedTime(endDate, timeZone);
+        const fullStartDate = `${startDate}T00:00:00`;
+        const fullEndDate = `${endDate}T23:59:59`;
+
+        const utcStartDate = fromZonedTime(fullStartDate, timeZone);
+        const utcEndDate = fromZonedTime(fullEndDate, timeZone);
         // Construir el filtro de consulta
         const queryFilter = {
-            departureTime: { $gte: utcStartDate, $lte: utcEndDate }
+            departureTime: { $gte: utcStartDate },
+            arrivalTime: { $lte: utcEndDate }
         };
 
         // Agregar filtro de conductor solo si se proporciona
@@ -208,12 +216,16 @@ export const getReportDetailsByCustomer = async (req, res) => {
 
     try {
         const timeZone = 'America/Mexico_City';
-        const utcStartDate = fromZonedTime(startDate, timeZone);
-        const utcEndDate = fromZonedTime(endDate, timeZone);
+        const fullStartDate = `${startDate}T00:00:00`;
+        const fullEndDate = `${endDate}T23:59:59`;
+
+        const utcStartDate = fromZonedTime(fullStartDate, timeZone);
+        const utcEndDate = fromZonedTime(fullEndDate, timeZone);
         // Buscar las rutas basadas en el ID del usuario y las fechas
         const routes = await Route.find({
             customerId: userId,
-            departureTime: { $gte: utcStartDate, $lte: utcEndDate },
+            departureTime: { $gte: utcStartDate },
+            arrivalTime: { $lte: utcEndDate },
             status: "Completado"
         });
 
