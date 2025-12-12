@@ -68,8 +68,7 @@ export const getReportDetailsByDriver = async (req, res) => {
         // Buscar las rutas basadas en el ID del usuario y las fechas
         const routes = await Route.find({
             driverId: userId,
-            departureTime: { $gte: utcStartDate },
-            arrivalTime: { $lte: utcEndDate },
+            departureTime: { $gte: utcStartDate, $lte: utcEndDate },
             status: "Completado"
         });
 
@@ -151,8 +150,7 @@ export const getReportDetailsByStatus = async (req, res) => {
         const utcEndDate = fromZonedTime(endDate, timeZone);
         // Construir el filtro de consulta
         const queryFilter = {
-            departureTime: { $gte: utcStartDate }, 
-            arrivalTime: { $lte: utcEndDate }     
+            departureTime: { $gte: utcStartDate, $lte: utcEndDate }
         };
 
         // Agregar filtro de conductor solo si se proporciona
@@ -215,8 +213,7 @@ export const getReportDetailsByCustomer = async (req, res) => {
         // Buscar las rutas basadas en el ID del usuario y las fechas
         const routes = await Route.find({
             customerId: userId,
-            departureTime: { $gte: utcStartDate },
-            arrivalTime: { $lte: utcEndDate },
+            departureTime: { $gte: utcStartDate, $lte: utcEndDate },
             status: "Completado"
         });
 
