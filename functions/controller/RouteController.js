@@ -974,13 +974,34 @@ export const getPendingDeviations = async (req, res) => {
                         type: dev.type,
                         timestamp: dev.timestamp,
                         lat: dev.lat,
-                        lng: dev.lng
+                        lng: dev.lng,
+                        deviationId: dev._id
                     });
                 }
             });
         });
 
         res.json(alerts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const markDeviationAsSeen = async (req, res) => {
+    try {
+        const { routeId, deviationId } = req.body;
+
+        const route = await Route.findById(routeId);
+        if (!route) return res.status(404).json({ message: "Route not found" });
+
+        const deviation = route.deviations.id(deviationId);
+        if (deviation) {
+            deviation.seenByAdmin = true;
+            await route.save();
+            res.json({ message: "Alert marked as seen" });
+        } else {
+            res.status(404).json({ message: "Deviation not found" });
+        }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
