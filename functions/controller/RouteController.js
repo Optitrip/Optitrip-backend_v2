@@ -1013,6 +1013,41 @@ export const getPendingDeviations = async (req, res) => {
     }
 };
 
+export const getUnseenDeviations = async (req, res) => {
+    try {
+        const routes = await Route.find({
+            "deviations.seenByAdmin": false
+        }).populate(['driverId']);
+
+        let alerts = [];
+
+        routes.forEach(route => {
+            route.deviations.forEach(dev => {
+                if (!dev.seenByAdmin) { 
+                    alerts.push({
+                        routeId: route._id,
+                        codeRoute: route.codeRoute,
+                        driverName: route.driverId ? route.driverId.name : "Desconocido",
+                        type: dev.type,
+                        timestamp: dev.timestamp,
+                        lat: dev.lat,
+                        lng: dev.lng,
+                        address: dev.address || `${dev.lat.toFixed(6)}, ${dev.lng.toFixed(6)}`,
+                        deviationId: dev._id,
+                        seenByAdmin: false
+                    });
+                }
+            });
+        });
+        
+        alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        res.json(alerts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 export const markDeviationAsSeen = async (req, res) => {
     try {
         const { routeId, deviationId } = req.body;
