@@ -3,8 +3,10 @@ import User from '../models/User.js';
 import { sendNotification } from '../services/NotificationService.js';
 import { format, parseISO } from 'date-fns';
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { config } from 'dotenv';
+config();
 
-
+const HERE_API_KEY = process.env.HERE_API_KEY;
 
 /**
  * @swagger
@@ -943,12 +945,30 @@ export const reportRouteDeviation = async (req, res) => {
             return res.status(404).json({ message: "Route not found" });
         }
 
+        // Obtener dirección mediante geocodificación inversa
+        let address = '';
+        try {
+            const apiKey = HERE_API_KEY || 'YOUR_FALLBACK_API_KEY';
+            const geoResponse = await fetch(
+                `https://revgeocode.search.hereapi.com/v1/revgeocode?at=${lat},${lng}&lang=es-MX&apiKey=${apiKey}`
+            );
+            const geoData = await geoResponse.json();
+            
+            if (geoData.items && geoData.items.length > 0) {
+                address = geoData.items[0].address.label;
+            }
+        } catch (geoError) {
+            console.error("Error obtaining address:", geoError);
+            address = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+        }
+
         route.deviations.push({
             type,
             lat,
             lng,
             timestamp: new Date(),
-            seenByAdmin: false
+            seenByAdmin: false,
+            address 
         });
 
         await route.save();
@@ -979,6 +999,7 @@ export const getPendingDeviations = async (req, res) => {
                         timestamp: dev.timestamp,
                         lat: dev.lat,
                         lng: dev.lng,
+                        address: dev.address || `${dev.lat.toFixed(6)}, ${dev.lng.toFixed(6)}`, 
                         deviationId: dev._id
                     });
                 }
@@ -1002,7 +1023,13 @@ export const markDeviationAsSeen = async (req, res) => {
         if (deviation) {
             deviation.seenByAdmin = true;
             await route.save();
-            res.json({ message: "Alert marked as seen" });
+            res.json({ 
+                message: "Alert marked as seen", 
+                deviation: {
+                    deviationId: deviation._id,
+                    seenByAdmin: deviation.seenByAdmin
+                }
+            });
         } else {
             res.status(404).json({ message: "Deviation not found" });
         }

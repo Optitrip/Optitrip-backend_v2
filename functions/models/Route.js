@@ -21,7 +21,8 @@ const deviationSchema = new mongoose.Schema({
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
     timestamp: { type: Date, default: Date.now },
-    seenByAdmin: { type: Boolean, default: false }
+    seenByAdmin: { type: Boolean, default: false },
+    address: { type: String, default: '' }
 });
 
 const routeSchema = new mongoose.Schema({
