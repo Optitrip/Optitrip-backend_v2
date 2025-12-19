@@ -983,28 +983,29 @@ export const reportRouteDeviation = async (req, res) => {
 export const getPendingDeviations = async (req, res) => {
     try {
         const routes = await Route.find({
-            "deviations.seenByAdmin": false
+            "deviations": { $exists: true, $not: { $size: 0 } }
         }).populate(['driverId']);
 
         let alerts = [];
 
         routes.forEach(route => {
             route.deviations.forEach(dev => {
-                if (!dev.seenByAdmin) {
-                    alerts.push({
-                        routeId: route._id,
-                        codeRoute: route.codeRoute,
-                        driverName: route.driverId ? route.driverId.name : "Desconocido",
-                        type: dev.type,
-                        timestamp: dev.timestamp,
-                        lat: dev.lat,
-                        lng: dev.lng,
-                        address: dev.address || `${dev.lat.toFixed(6)}, ${dev.lng.toFixed(6)}`, 
-                        deviationId: dev._id
-                    });
-                }
+                alerts.push({
+                    routeId: route._id,
+                    codeRoute: route.codeRoute,
+                    driverName: route.driverId ? route.driverId.name : "Desconocido",
+                    type: dev.type,
+                    timestamp: dev.timestamp,
+                    lat: dev.lat,
+                    lng: dev.lng,
+                    address: dev.address || `${dev.lat.toFixed(6)}, ${dev.lng.toFixed(6)}`,
+                    deviationId: dev._id,
+                    seenByAdmin: dev.seenByAdmin 
+                });
             });
         });
+
+        alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         res.json(alerts);
     } catch (error) {
