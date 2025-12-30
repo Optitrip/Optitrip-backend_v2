@@ -22,7 +22,16 @@ const deviationSchema = new mongoose.Schema({
     lng: { type: Number, required: true },
     timestamp: { type: Date, default: Date.now },
     seenByAdmin: { type: Boolean, default: false },
-    address: { type: String, default: '' }
+    address: { type: String, default: '' },
+     recalculatedRoute: {
+        polyline: String, 
+        sections: [{
+            polyline: String,
+            distance: Number,
+            duration: Number
+        }],
+        timestamp: Date
+    }
 });
 
 const routeSchema = new mongoose.Schema({

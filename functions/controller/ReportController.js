@@ -289,7 +289,7 @@ export const getReportDetailsByCustomer = async (req, res) => {
     }
 };
 
-// Controlador para obtenr la información de los POD's de cada punto
+// Controlador para obtener la información de los POD's de cada punto
 export const getReportDetailsByCodeRoute = async (req, res) => {
     const { codeRoute } = req.body;
 

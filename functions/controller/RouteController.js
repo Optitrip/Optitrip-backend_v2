@@ -937,7 +937,7 @@ export const updateRoute = async (req, res) => {
 export const reportRouteDeviation = async (req, res) => {
     try {
         const { codeRoute } = req.params;
-        const { type, lat, lng } = req.body;
+        const { type, lat, lng, recalculatedPolyline,  recalculatedSections } = req.body;
 
         const route = await Route.findOne({ codeRoute });
 
@@ -962,18 +962,32 @@ export const reportRouteDeviation = async (req, res) => {
             address = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
         }
 
-        route.deviations.push({
+        const deviation = {
             type,
             lat,
             lng,
             timestamp: new Date(),
             seenByAdmin: false,
-            address 
-        });
+            address
+        };
+
+        // Si se proporcionó geometría de ruta recalculada, agregarla
+        if (recalculatedPolyline || recalculatedSections) {
+            deviation.recalculatedRoute = {
+                polyline: recalculatedPolyline,
+                sections: recalculatedSections || [],
+                timestamp: new Date()
+            };
+        }
+
+        route.deviations.push(deviation);
 
         await route.save();
 
-        res.status(200).json({ message: "Deviation reported successfully" });
+         res.status(200).json({ 
+            message: "Deviation reported successfully",
+            deviationId: route.deviations[route.deviations.length - 1]._id
+        });
     } catch (error) {
         console.error("Error reporting deviation:", error);
         res.status(500).json({ message: error.message });
@@ -1000,7 +1014,8 @@ export const getPendingDeviations = async (req, res) => {
                     lng: dev.lng,
                     address: dev.address || `${dev.lat.toFixed(6)}, ${dev.lng.toFixed(6)}`,
                     deviationId: dev._id,
-                    seenByAdmin: dev.seenByAdmin 
+                    seenByAdmin: dev.seenByAdmin,
+                    recalculatedRoute: dev.recalculatedRoute || null
                 });
             });
         });
