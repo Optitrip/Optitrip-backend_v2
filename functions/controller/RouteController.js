@@ -1,5 +1,6 @@
 import Route from '../models/Route.js';
 import User from '../models/User.js';
+import { getScopeFilter } from '../utils/HierarchyUtils.js';
 import { sendNotification } from '../services/NotificationService.js';
 import { format, parseISO } from 'date-fns';
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz';
@@ -1030,8 +1031,25 @@ export const getPendingDeviations = async (req, res) => {
 
 export const getUnseenDeviations = async (req, res) => {
     try {
+        const { userId } = req.query;
+
+        if (!userId) {
+            return res.status(400).json({ message: "User ID required" });
+        }
+
+        const currentUser = await User.findById(userId);
+        if (!currentUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const userFilter = await getScopeFilter(currentUser);
+
+        const allowedUsers = await User.find(userFilter).select('_id');
+        const allowedUserIds = allowedUsers.map(u => u._id);
+
         const routes = await Route.find({
-            "deviations.seenByAdmin": false
+            "deviations.seenByAdmin": false,
+            driverId: { $in: allowedUserIds } 
         }).populate(['driverId']);
 
         let alerts = [];
