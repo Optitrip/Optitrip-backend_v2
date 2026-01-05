@@ -982,7 +982,6 @@ export const reportRouteDeviation = async (req, res) => {
         }
 
         route.deviations.push(deviation);
-
         await route.save();
 
          res.status(200).json({ 

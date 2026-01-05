@@ -17,13 +17,17 @@ const assignedBySchema = new mongoose.Schema({
 }, { _id: false });
 
 const deviationSchema = new mongoose.Schema({
-    type: { type: String, required: true },
+    type: { 
+        type: String, 
+        required: true,
+        enum: ['DEVIATION_DETECTED', 'ORIGINAL_ROUTE', 'NEW_DESTINATION'] 
+    },
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
     timestamp: { type: Date, default: Date.now },
     seenByAdmin: { type: Boolean, default: false },
     address: { type: String, default: '' },
-     recalculatedRoute: {
+    recalculatedRoute: {
         polyline: String, 
         sections: [{
             polyline: String,
