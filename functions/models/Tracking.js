@@ -9,7 +9,7 @@ const trackingSchema = new mongoose.Schema({
         timestamp: { type: Date }
     },
     superior_account: { type: String},
-    status: { type: String, default: 'Inactivo' },
+    status: { type: String, default: 'Fuera de línea', enum: ['Disponible', 'Activo', 'Fuera de línea'] },
 }, { versionKey: false });
 
 const Tracking = mongoose.model('Tracking', trackingSchema, 'tracking');

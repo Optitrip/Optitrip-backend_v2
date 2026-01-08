@@ -109,54 +109,59 @@ export const trackDriverLocation = async (req, res) => {
             tracking.superior_account = superior_account;
 
             if (isAuthenticated) {
-                if (route) {
-                    tracking.status = 'Activo';  // Estado activo si está autenticado y tiene una ruta activa
-                } else {
-                    tracking.status = 'Inactivo';  // Estado inactivo si está autenticado pero no tiene una ruta activa
-                }
+                // Actualizar ubicación solo si está autenticado
                 tracking.location = { latitude, longitude, timestamp: new Date() };
+
+                if (route) {
+                    // Tiene una ruta "Ruta en curso" → Activo (en ruta)
+                    tracking.status = 'Activo';
+                } else {
+                    // No tiene ruta en curso → Disponible 
+                    tracking.status = 'Disponible';
+                }
             } else {
-                // Si no está autenticado, mantiene la última ubicación y cambia el estado a 'Fuera de línea'
+                // No está autenticado → Fuera de línea
                 tracking.status = 'Fuera de línea';
+                // Mantener la última ubicación registrada (no actualizar)
             }
         }
 
-        await tracking.save();
-        console.log(tracking)
-        res.status(200).json({ tracking });
-
-    } catch (error) {
-        console.error('Error tracking location', error);
-        res.status(500).json({ message: 'Internal Server Error ' + error });
-    }
-};
-
-
-/**
- * Método para actualizar los estados de los usuarios en función de la lógica
- * Cambia el estado a 'Fuera de línea' si el timestamp registrado es mayor a 1 minuto
- */
-export const updateTrackingStatuses = async () => {
-    try {
-        const now = new Date();
-        const thresholdTime = new Date(now.getTime() - 90 * 1000);
-
-        // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
-        const records = await Tracking.find({
-            isAuthenticated: true,
-            status: { $in: ['Activo', 'Inactivo'] },
-            'location.timestamp': { $lte: thresholdTime }
-        });
-
-        // Actualiza el estado de los registros encontrados
-        for (const tracking of records) {
-            tracking.status = 'Fuera de línea';
             await tracking.save();
+            console.log(tracking)
+            res.status(200).json({ tracking });
+
+        } catch (error) {
+            console.error('Error tracking location', error);
+            res.status(500).json({ message: 'Internal Server Error ' + error });
         }
+    };
 
-        console.log(`Updated ${records.length} tracking records to 'Fuera de línea'.`);
 
-    } catch (error) {
-        console.error('Error updating tracking statuses', error);
-    }
-};
+    /**
+     * Método para actualizar los estados de los usuarios en función de la lógica
+     * Cambia el estado a 'Fuera de línea' si el timestamp registrado es mayor a 1 minuto
+     */
+    export const updateTrackingStatuses = async () => {
+        try {
+            const now = new Date();
+            const thresholdTime = new Date(now.getTime() - 90 * 1000);
+
+            // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
+            const records = await Tracking.find({
+                isAuthenticated: true,
+                status: { $in: ['Activo', 'Inactivo'] },
+                'location.timestamp': { $lte: thresholdTime }
+            });
+
+            // Actualiza el estado de los registros encontrados
+            for (const tracking of records) {
+                tracking.status = 'Fuera de línea';
+                await tracking.save();
+            }
+
+            console.log(`Updated ${records.length} tracking records to 'Fuera de línea'.`);
+
+        } catch (error) {
+            console.error('Error updating tracking statuses', error);
+        }
+    };
