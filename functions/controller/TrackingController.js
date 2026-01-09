@@ -72,23 +72,28 @@ import mongoose from 'mongoose';
  *         description: Internal server error
  */
 export const trackDriverLocation = async (req, res) => {
-    const { userId, isAuthenticated, latitude, longitude, superior_account } = req.body;
+    const { 
+        userId, 
+        isAuthenticated, 
+        latitude, 
+        longitude, 
+        superior_account,
+        routeProgress 
+    } = req.body;
+    
     console.log(`[${new Date().toISOString()}] Ubicación recibida:`);
     console.log(`  userId: ${userId}, lat: ${latitude}, lng: ${longitude}`);
-
+    
     try {
-        console.log(userId);
-        console.log(isAuthenticated);
-        console.log(latitude);
-        console.log(longitude);
-        console.log(superior_account);
-
         if (typeof latitude !== 'number' || typeof longitude !== 'number') {
             return res.status(400).json({ message: 'Invalid latitude or longitude' });
         }
 
         // Encuentra la ruta activa del usuario
-        const route = await Route.findOne({ driverId: new mongoose.Types.ObjectId(userId), status: 'Ruta en curso' });
+        const route = await Route.findOne({ 
+            driverId: new mongoose.Types.ObjectId(userId), 
+            status: 'Ruta en curso' 
+        });
 
         // Encuentra o crea el documento de tracking del usuario
         let tracking = await Tracking.findOne({ userId });
@@ -101,40 +106,61 @@ export const trackDriverLocation = async (req, res) => {
                 location: { latitude, longitude, timestamp: new Date() },
                 status: isAuthenticated ? (route ? 'Activo' : 'Disponible') : 'Fuera de línea',
                 superior_account,
+                routeProgress: routeProgress ? {
+                    percentage: routeProgress.percentage || 0,
+                    etaMinutes: routeProgress.etaMinutes || null,
+                    totalDistance: routeProgress.totalDistance || 0,
+                    traveledDistance: routeProgress.traveledDistance || 0,
+                    activeRouteId: route ? route._id : null,
+                    lastUpdated: new Date()
+                } : undefined
             });
 
         } else {
-            // Si existe un tracking previo, actualiza la ubicación, estado, autenticación y cuenta superior
             tracking.isAuthenticated = isAuthenticated;
             tracking.superior_account = superior_account;
 
             if (isAuthenticated) {
-                // Actualizar ubicación solo si está autenticado
                 tracking.location = { latitude, longitude, timestamp: new Date() };
 
                 if (route) {
-                    // Tiene una ruta "Ruta en curso" → Activo (en ruta)
                     tracking.status = 'Activo';
+                    
+                    if (routeProgress) {
+                        tracking.routeProgress = {
+                            percentage: routeProgress.percentage || 0,
+                            etaMinutes: routeProgress.etaMinutes || null,
+                            totalDistance: routeProgress.totalDistance || 0,
+                            traveledDistance: routeProgress.traveledDistance || 0,
+                            activeRouteId: route._id,
+                            lastUpdated: new Date()
+                        };
+                    }
                 } else {
-                    // No tiene ruta en curso → Disponible 
                     tracking.status = 'Disponible';
+                    tracking.routeProgress = {
+                        percentage: 0,
+                        etaMinutes: null,
+                        totalDistance: 0,
+                        traveledDistance: 0,
+                        activeRouteId: null,
+                        lastUpdated: new Date()
+                    };
                 }
             } else {
-                // No está autenticado → Fuera de línea
                 tracking.status = 'Fuera de línea';
-                // Mantener la última ubicación registrada (no actualizar)
             }
         }
 
-            await tracking.save();
-            console.log(tracking)
-            res.status(200).json({ tracking });
+        await tracking.save();
+        console.log(tracking);
+        res.status(200).json({ tracking });
 
-        } catch (error) {
-            console.error('Error tracking location', error);
-            res.status(500).json({ message: 'Internal Server Error ' + error });
-        }
-    };
+    } catch (error) {
+        console.error('Error tracking location', error);
+        res.status(500).json({ message: 'Internal Server Error ' + error });
+    }
+};
 
 
     /**

@@ -8,8 +8,16 @@ const trackingSchema = new mongoose.Schema({
         longitude: { type: Number },
         timestamp: { type: Date }
     },
-    superior_account: { type: String},
+    superior_account: { type: String },
     status: { type: String, default: 'Fuera de línea', enum: ['Disponible', 'Activo', 'Fuera de línea'] },
+    routeProgress: {
+        percentage: { type: Number, default: 0, min: 0, max: 100 }, 
+        etaMinutes: { type: Number, default: null }, 
+        totalDistance: { type: Number, default: 0 }, 
+        traveledDistance: { type: Number, default: 0 },
+        activeRouteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Route', default: null }, 
+        lastUpdated: { type: Date, default: Date.now } 
+    }
 }, { versionKey: false });
 
 const Tracking = mongoose.model('Tracking', trackingSchema, 'tracking');
