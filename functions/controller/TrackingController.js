@@ -99,7 +99,7 @@ export const trackDriverLocation = async (req, res) => {
                 userId,
                 isAuthenticated,
                 location: { latitude, longitude, timestamp: new Date() },
-                status: isAuthenticated ? (route ? 'Activo' : 'Inactivo') : 'Fuera de línea',
+                status: isAuthenticated ? (route ? 'Activo' : 'Disponible') : 'Fuera de línea',
                 superior_account,
             });
 
@@ -149,7 +149,7 @@ export const trackDriverLocation = async (req, res) => {
             // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
             const records = await Tracking.find({
                 isAuthenticated: true,
-                status: { $in: ['Activo', 'Inactivo'] },
+                status: { $in: ['Activo', 'Disponible'] },
                 'location.timestamp': { $lte: thresholdTime }
             });
 

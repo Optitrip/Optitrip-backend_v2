@@ -1087,13 +1087,17 @@ export const sendRouteNotification = async (req, res) => {
     try {
         const { codeRoute, driverId } = req.body;
         
+        console.log('[NOTIF] Enviando notificación para ruta:', codeRoute, 'a driver:', driverId);
+        
         const driver = await User.findById(driverId);
         if (!driver || !driver.fcmToken) {
+            console.log('[NOTIF] Driver no encontrado o sin FCM token');
             return res.status(400).json({ message: "Driver or FCM token not found" });
         }
 
         const route = await Route.findOne({ codeRoute });
         if (!route) {
+            console.log('[NOTIF] Ruta no encontrada');
             return res.status(404).json({ message: "Route not found" });
         }
 
@@ -1103,20 +1107,28 @@ export const sendRouteNotification = async (req, res) => {
             "dd/MM/yyyy 'a las' HH:mm"
         );
 
+        const notificationData = {
+            type: "route_assigned",
+            codeRoute: codeRoute,  
+            departureTime: route.departureTime.toISOString(),
+            routeId: route._id.toString(),
+            title: "Nueva Ruta Asignada", 
+            body: `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}` 
+        };
+
+        console.log('[NOTIF] Data a enviar:', notificationData);
+
         await sendNotification(
             driver.fcmToken,
             "Nueva Ruta Asignada",
             `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}`,
-            {
-                type: "route_assigned",
-                codeRoute: codeRoute,
-                departureTime: route.departureTime.toISOString(),
-                routeId: route._id.toString()
-            }
+            notificationData  
         );
 
+        console.log('[NOTIF] Notificación enviada exitosamente');
         res.json({ success: true });
     } catch (error) {
+        console.error('[NOTIF] Error:', error);
         res.status(500).json({ message: error.message });
     }
 };
