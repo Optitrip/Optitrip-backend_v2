@@ -650,7 +650,6 @@ export const createRoute = async (req, res) => {
         const arrivalTimeUTC = new Date(departureTimeUTC.getTime() + frontDurationMs);
 
 
-        // === VALIDACIÓN DE ROUTE SECTIONS ===
         let validRouteSections = [];
         if (routeSections && Array.isArray(routeSections)) {
             validRouteSections = routeSections;
@@ -706,28 +705,6 @@ export const createRoute = async (req, res) => {
 
 
         await newRoute.save();
-
-        // Enviar notificación al conductor
-        if (driver && driver.fcmToken) {
-            const notificationTitle = "Nueva Ruta Asignada";
-
-            const formattedDeparture = formatInTimeZone(
-                departureTimeUTC,
-                'America/Mexico_City',
-                "dd/MM/yyyy 'a las' HH:mm"
-            );
-
-            const notificationBody = `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}`;
-
-            const notificationData = {
-                type: "route_assigned",
-                codeRoute: codeRoute,
-                departureTime: departureTimeUTC.toISOString(),
-                routeId: newRoute._id.toString()
-            };
-
-            await sendNotification(driver.fcmToken, notificationTitle, notificationBody, notificationData);
-        }
 
         res.status(201).json({ message: "Route created successfully", route: newRoute });
     } catch (error) {
@@ -1101,6 +1078,44 @@ export const markDeviationAsSeen = async (req, res) => {
         } else {
             res.status(404).json({ message: "Deviation not found" });
         }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const sendRouteNotification = async (req, res) => {
+    try {
+        const { codeRoute, driverId } = req.body;
+        
+        const driver = await User.findById(driverId);
+        if (!driver || !driver.fcmToken) {
+            return res.status(400).json({ message: "Driver or FCM token not found" });
+        }
+
+        const route = await Route.findOne({ codeRoute });
+        if (!route) {
+            return res.status(404).json({ message: "Route not found" });
+        }
+
+        const formattedDeparture = formatInTimeZone(
+            route.departureTime,
+            'America/Mexico_City',
+            "dd/MM/yyyy 'a las' HH:mm"
+        );
+
+        await sendNotification(
+            driver.fcmToken,
+            "Nueva Ruta Asignada",
+            `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}`,
+            {
+                type: "route_assigned",
+                codeRoute: codeRoute,
+                departureTime: route.departureTime.toISOString(),
+                routeId: route._id.toString()
+            }
+        );
+
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

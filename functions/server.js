@@ -11,7 +11,7 @@ import { resetPassword } from "./controller/ResetPasswordController.js";
 import { login } from "./controller/LoginController.js";
 import { swaggerUi, specs } from "./swagger.js";
 import { moveAccount } from "./controller/MoveAccount.js";
-import { getRouteByCodeRoute, getRoutesByDriverId, getHistoryRoutesByDriverId, createRoute, updateRouteStatus, getRouteById, updateRoute, reportRouteDeviation, getPendingDeviations, markDeviationAsSeen, getUnseenDeviations} from "./controller/RouteController.js";
+import { getRouteByCodeRoute, getRoutesByDriverId, getHistoryRoutesByDriverId, createRoute, updateRouteStatus, getRouteById, updateRoute, reportRouteDeviation, getPendingDeviations, markDeviationAsSeen, getUnseenDeviations, sendRouteNotification} from "./controller/RouteController.js";
 import { createTask } from "./controller/TaskController.js";
 import { getReportDetailsByDriver, getReportDetailsByStatus, getReportDetailsByCustomer, getReportDetailsByCodeRoute} from "./controller/ReportController.js";
 import { trackDriverLocation, updateTrackingStatuses } from "./controller/TrackingController.js";
@@ -71,6 +71,7 @@ app.post("/route/deviation/:codeRoute", reportRouteDeviation);
 app.get("/reports/deviations/pending", getPendingDeviations);
 app.get("/reports/deviations/unseen", getUnseenDeviations);
 app.put("/report/deviation/seen", markDeviationAsSeen);
+app.post("/send-route-notification", sendRouteNotification);
 
 // Ruta de health check
 app.get("/", (req, res) => {
