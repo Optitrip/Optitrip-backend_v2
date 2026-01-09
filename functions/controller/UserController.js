@@ -43,25 +43,39 @@ import { canCreateRole, validateNoCircularReference, ROLE_PERMISSIONS, getScopeF
  */
 export const getUsers = async (req, res) => {
   try {
-    const { requestingUserId } = req.query; // ID del usuario que solicita
+    const { requestingUserId } = req.query; 
     
     if (!requestingUserId) {
       return res.status(400).json({ message: "requestingUserId es requerido" });
     }
     
-    // Obtener usuario solicitante
     const requestingUser = await User.findById(requestingUserId);
     if (!requestingUser) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
     
-    // Obtener filtro basado en su scope
     const scopeFilter = await getScopeFilter(requestingUser);
     
-    // Consultar usuarios dentro de su scope
     const users = await User.find(scopeFilter).populate("rol_id");
     
-    res.json(users);
+    const usersWithTracking = await Promise.all(users.map(async (user) => {
+        const userObj = user.toObject(); 
+        
+        if (user.type_user === 'Conductor') {
+            const tracking = await Tracking.findOne({ userId: user._id });
+            
+            if (tracking) {
+                userObj.tracking = {
+                    status: tracking.status,
+                    location: tracking.location
+                };
+            }
+        }
+        return userObj;
+    }));
+    
+    res.json(usersWithTracking);
+
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ message: error.message });
