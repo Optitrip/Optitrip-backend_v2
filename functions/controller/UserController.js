@@ -288,6 +288,19 @@ export const getUserById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    if (user.type_user === "Conductor") {
+      const tracking = await Tracking.findOne({ userId: user._id });
+      if (tracking) {
+        const userWithTracking = user.toObject();
+        userWithTracking.tracking = {
+          status: tracking.status,
+          location: tracking.location,
+        };
+        return res.json(userWithTracking);
+      }
+    }
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
