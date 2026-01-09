@@ -84,22 +84,19 @@ export const trackDriverLocation = async (req, res) => {
     console.log(`[${new Date().toISOString()}] Ubicación recibida:`);
     console.log(`  userId: ${userId}, lat: ${latitude}, lng: ${longitude}`);
     
-    try {
+   try {
         if (typeof latitude !== 'number' || typeof longitude !== 'number') {
             return res.status(400).json({ message: 'Invalid latitude or longitude' });
         }
 
-        // Encuentra la ruta activa del usuario
         const route = await Route.findOne({ 
             driverId: new mongoose.Types.ObjectId(userId), 
             status: 'Ruta en curso' 
         });
 
-        // Encuentra o crea el documento de tracking del usuario
         let tracking = await Tracking.findOne({ userId });
 
         if (!tracking) {
-            // Si no existe un tracking previo, crea uno nuevo
             tracking = new Tracking({
                 userId,
                 isAuthenticated,
@@ -108,7 +105,9 @@ export const trackDriverLocation = async (req, res) => {
                 superior_account,
                 routeProgress: routeProgress ? {
                     percentage: routeProgress.percentage || 0,
-                    etaMinutes: routeProgress.etaMinutes || null,
+                    etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null) 
+                                ? routeProgress.etaMinutes 
+                                : null,
                     totalDistance: routeProgress.totalDistance || 0,
                     traveledDistance: routeProgress.traveledDistance || 0,
                     activeRouteId: route ? route._id : null,
@@ -129,7 +128,11 @@ export const trackDriverLocation = async (req, res) => {
                     if (routeProgress) {
                         tracking.routeProgress = {
                             percentage: routeProgress.percentage || 0,
-                            etaMinutes: routeProgress.etaMinutes || null,
+                            
+                            etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null) 
+                                        ? routeProgress.etaMinutes 
+                                        : null,
+                            
                             totalDistance: routeProgress.totalDistance || 0,
                             traveledDistance: routeProgress.traveledDistance || 0,
                             activeRouteId: route._id,
@@ -153,7 +156,6 @@ export const trackDriverLocation = async (req, res) => {
         }
 
         await tracking.save();
-        console.log(tracking);
         res.status(200).json({ tracking });
 
     } catch (error) {
