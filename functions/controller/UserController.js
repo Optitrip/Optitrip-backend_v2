@@ -43,37 +43,38 @@ import { canCreateRole, validateNoCircularReference, ROLE_PERMISSIONS, getScopeF
  */
 export const getUsers = async (req, res) => {
   try {
-    const { requestingUserId } = req.query; 
-    
+    const { requestingUserId } = req.query;
+
     if (!requestingUserId) {
       return res.status(400).json({ message: "requestingUserId es requerido" });
     }
-    
+
     const requestingUser = await User.findById(requestingUserId);
     if (!requestingUser) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    
+
     const scopeFilter = await getScopeFilter(requestingUser);
-    
+
     const users = await User.find(scopeFilter).populate("rol_id");
-    
+
     const usersWithTracking = await Promise.all(users.map(async (user) => {
-        const userObj = user.toObject(); 
-        
-        if (user.type_user === 'Conductor') {
-            const tracking = await Tracking.findOne({ userId: user._id });
-            
-            if (tracking) {
-                userObj.tracking = {
-                    status: tracking.status,
-                    location: tracking.location
-                };
-            }
+      const userObj = user.toObject();
+
+      if (user.type_user === 'Conductor') {
+        const tracking = await Tracking.findOne({ userId: user._id });
+
+        if (tracking) {
+          userObj.tracking = {
+            status: tracking.status,
+            location: tracking.location,
+            routeProgress: tracking.routeProgress || null
+          };
         }
-        return userObj;
+      }
+      return userObj;
     }));
-    
+
     res.json(usersWithTracking);
 
   } catch (error) {
@@ -197,37 +198,35 @@ export const getUsersAdmin = async (req, res) => {
  */
 export const getUsersDriver = async (req, res) => {
   try {
-    // Obtén el email del parámetro de consulta
     const { email } = req.query;
 
-    // Asegúrate de que el parámetro email esté presente
     if (!email) {
       return res.status(400).json({ message: "Email parameter is required" });
     }
 
-    // Filtrar usuarios con type_user igual a 'Conductor' y superior_account igual al email recibido
     const users = await User.find({
       type_user: "Conductor",
       superior_account: email,
     }).populate("rol_id");
 
-    // Obtener el tracking para cada usuario
     const userTrackingPromises = users.map(async (user) => {
       const tracking = await Tracking.findOne({ userId: user._id });
-      // Solo incluir el campo tracking si se encuentra
+
       const userWithTracking = { ...user.toObject() };
+
       if (tracking) {
         userWithTracking.tracking = {
           status: tracking.status,
           location: tracking.location,
+          routeProgress: tracking.routeProgress || null
         };
       }
+
       return userWithTracking;
     });
 
     const usersWithTracking = await Promise.all(userTrackingPromises);
 
-    // Retorna los usuarios con información de tracking si está disponible
     res.json(usersWithTracking);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -310,6 +309,7 @@ export const getUserById = async (req, res) => {
         userWithTracking.tracking = {
           status: tracking.status,
           location: tracking.location,
+          routeProgress: tracking.routeProgress || null
         };
         return res.json(userWithTracking);
       }
@@ -358,15 +358,15 @@ export const getUserById = async (req, res) => {
  */
 export const createUser = async (req, res) => {
   try {
-    const { 
-      superior_account, 
-      type_user, 
-      name, 
-      email, 
-      password, 
-      phone, 
+    const {
+      superior_account,
+      type_user,
+      name,
+      email,
+      password,
+      phone,
       rol_id,
-      created_by_id 
+      created_by_id
     } = req.body;
 
     // VALIDACIÓN 1: Email único
@@ -379,7 +379,7 @@ export const createUser = async (req, res) => {
     if (!created_by_id) {
       return res.status(400).json({ message: "created_by_id es requerido" });
     }
-    
+
     const creator = await User.findById(created_by_id).populate('rol_id');
     if (!creator) {
       return res.status(404).json({ message: "Usuario creador no encontrado" });
@@ -388,7 +388,7 @@ export const createUser = async (req, res) => {
     // VALIDACIÓN 3: Verificar permisos de creación
     const creatorRole = creator.type_user;
     if (!canCreateRole(creatorRole, type_user)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: `Un ${creatorRole} no puede crear usuarios tipo ${type_user}`,
         allowed: ROLE_PERMISSIONS[creatorRole]?.canCreate || []
       });
@@ -396,15 +396,15 @@ export const createUser = async (req, res) => {
 
     // VALIDACIÓN 4: Superior account correcto
     let finalSuperiorAccount = superior_account;
-    
+
     if (creatorRole === 'Super Administrador') {
       if (type_user === 'Distribuidor' || type_user === 'Administrador') {
         finalSuperiorAccount = superior_account || null;
       } else {
         // Cliente/Conductor necesitan superior
         if (!superior_account) {
-          return res.status(400).json({ 
-            message: `${type_user} debe tener una cuenta superior` 
+          return res.status(400).json({
+            message: `${type_user} debe tener una cuenta superior`
           });
         }
       }
@@ -425,7 +425,7 @@ export const createUser = async (req, res) => {
       'Cliente': '666744007348f2ae62817a74',
       'Conductor': '6677d0702c684374a602531d'
     };
-    
+
     const finalRolId = rol_id || roleMap[type_user];
     if (!finalRolId) {
       return res.status(400).json({ message: "Rol no válido" });
@@ -441,10 +441,10 @@ export const createUser = async (req, res) => {
       rol_id: finalRolId,
       created_by: created_by_id
     });
-    
+
     await newUser.save();
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       message: "User created successfully",
       user: {
         _id: newUser._id,
@@ -453,7 +453,7 @@ export const createUser = async (req, res) => {
         superior_account: newUser.superior_account
       }
     });
-    
+
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ message: error.message });
@@ -566,25 +566,25 @@ export const deleteUser = async (req, res) => {
 };
 
 export const updateFCMToken = async (req, res) => {
-    try {
-        const { userId, fcmToken } = req.body;
+  try {
+    const { userId, fcmToken } = req.body;
 
-        if (!userId || !fcmToken) {
-            return res.status(400).json({ message: "userId and fcmToken are required" });
-        }
-
-        const user = await User.findByIdAndUpdate(
-            userId,
-            { fcmToken },
-            { new: true }
-        );
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        res.status(200).json({ message: "FCM token updated successfully" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    if (!userId || !fcmToken) {
+      return res.status(400).json({ message: "userId and fcmToken are required" });
     }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { fcmToken },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "FCM token updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
