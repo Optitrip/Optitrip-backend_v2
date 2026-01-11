@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import dotenv from 'dotenv'; 
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -30,25 +30,19 @@ if (serviceAccount) {
 }
 
 export const sendNotification = async (fcmToken, title, body, data = {}) => {
-    // Convertir todos los valores de data a string
     const stringData = {};
     for (const key in data) {
         stringData[key] = String(data[key]);
     }
-    
+
+    stringData.title = title;
+    stringData.body = body;
+
     const message = {
-        notification: {
-            title,
-            body
-        },
         data: stringData,
         token: fcmToken,
         android: {
             priority: 'high',
-            notification: {
-                channelId: 'optitrip_notifications',
-                priority: 'high'
-            }
         }
     };
 
