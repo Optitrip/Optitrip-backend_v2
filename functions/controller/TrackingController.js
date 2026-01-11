@@ -72,26 +72,26 @@ import mongoose from 'mongoose';
  *         description: Internal server error
  */
 export const trackDriverLocation = async (req, res) => {
-    const { 
-        userId, 
-        isAuthenticated, 
-        latitude, 
-        longitude, 
+    const {
+        userId,
+        isAuthenticated,
+        latitude,
+        longitude,
         superior_account,
-        routeProgress 
+        routeProgress
     } = req.body;
-    
+
     console.log(`[${new Date().toISOString()}] Ubicación recibida:`);
     console.log(`  userId: ${userId}, lat: ${latitude}, lng: ${longitude}`);
-    
-   try {
+
+    try {
         if (typeof latitude !== 'number' || typeof longitude !== 'number') {
             return res.status(400).json({ message: 'Invalid latitude or longitude' });
         }
 
-        const route = await Route.findOne({ 
-            driverId: new mongoose.Types.ObjectId(userId), 
-            status: 'Ruta en curso' 
+        const route = await Route.findOne({
+            driverId: new mongoose.Types.ObjectId(userId),
+            status: 'Ruta en curso'
         });
 
         let tracking = await Tracking.findOne({ userId });
@@ -105,12 +105,15 @@ export const trackDriverLocation = async (req, res) => {
                 superior_account,
                 routeProgress: routeProgress ? {
                     percentage: routeProgress.percentage || 0,
-                    etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null) 
-                                ? routeProgress.etaMinutes 
-                                : null,
+                    etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null)
+                        ? routeProgress.etaMinutes
+                        : null,
                     totalDistance: routeProgress.totalDistance || 0,
                     traveledDistance: routeProgress.traveledDistance || 0,
                     activeRouteId: route ? route._id : null,
+                    accumulatedDistance: routeProgress.accumulatedDistance || 0,
+                    originalTotalDistance: routeProgress.originalTotalDistance || routeProgress.totalDistance || 0,
+
                     lastUpdated: new Date()
                 } : undefined
             });
@@ -124,18 +127,19 @@ export const trackDriverLocation = async (req, res) => {
 
                 if (route) {
                     tracking.status = 'Activo';
-                    
+
                     if (routeProgress) {
                         tracking.routeProgress = {
                             percentage: routeProgress.percentage || 0,
-                            
-                            etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null) 
-                                        ? routeProgress.etaMinutes 
-                                        : null,
-                            
+                            etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null)
+                                ? routeProgress.etaMinutes
+                                : null,
                             totalDistance: routeProgress.totalDistance || 0,
                             traveledDistance: routeProgress.traveledDistance || 0,
                             activeRouteId: route._id,
+                            accumulatedDistance: routeProgress.accumulatedDistance || tracking.routeProgress?.accumulatedDistance || 0,
+                            originalTotalDistance: routeProgress.originalTotalDistance || tracking.routeProgress?.originalTotalDistance || routeProgress.totalDistance || 0,
+
                             lastUpdated: new Date()
                         };
                     }
@@ -147,6 +151,8 @@ export const trackDriverLocation = async (req, res) => {
                         totalDistance: 0,
                         traveledDistance: 0,
                         activeRouteId: null,
+                        accumulatedDistance: 0,
+                        originalTotalDistance: 0,
                         lastUpdated: new Date()
                     };
                 }
@@ -165,31 +171,31 @@ export const trackDriverLocation = async (req, res) => {
 };
 
 
-    /**
-     * Método para actualizar los estados de los usuarios en función de la lógica
-     * Cambia el estado a 'Fuera de línea' si el timestamp registrado es mayor a 1 minuto
-     */
-    export const updateTrackingStatuses = async () => {
-        try {
-            const now = new Date();
-            const thresholdTime = new Date(now.getTime() - 90 * 1000);
+/**
+ * Método para actualizar los estados de los usuarios en función de la lógica
+ * Cambia el estado a 'Fuera de línea' si el timestamp registrado es mayor a 1 minuto
+ */
+export const updateTrackingStatuses = async () => {
+    try {
+        const now = new Date();
+        const thresholdTime = new Date(now.getTime() - 90 * 1000);
 
-            // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
-            const records = await Tracking.find({
-                isAuthenticated: true,
-                status: { $in: ['Activo', 'Disponible'] },
-                'location.timestamp': { $lte: thresholdTime }
-            });
+        // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
+        const records = await Tracking.find({
+            isAuthenticated: true,
+            status: { $in: ['Activo', 'Disponible'] },
+            'location.timestamp': { $lte: thresholdTime }
+        });
 
-            // Actualiza el estado de los registros encontrados
-            for (const tracking of records) {
-                tracking.status = 'Fuera de línea';
-                await tracking.save();
-            }
-
-            console.log(`Updated ${records.length} tracking records to 'Fuera de línea'.`);
-
-        } catch (error) {
-            console.error('Error updating tracking statuses', error);
+        // Actualiza el estado de los registros encontrados
+        for (const tracking of records) {
+            tracking.status = 'Fuera de línea';
+            await tracking.save();
         }
-    };
+
+        console.log(`Updated ${records.length} tracking records to 'Fuera de línea'.`);
+
+    } catch (error) {
+        console.error('Error updating tracking statuses', error);
+    }
+};

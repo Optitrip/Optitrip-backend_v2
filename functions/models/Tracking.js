@@ -11,12 +11,14 @@ const trackingSchema = new mongoose.Schema({
     superior_account: { type: String },
     status: { type: String, default: 'Fuera de línea', enum: ['Disponible', 'Activo', 'Fuera de línea'] },
     routeProgress: {
-        percentage: { type: Number, default: 0, min: 0, max: 100 }, 
-        etaMinutes: { type: Number, default: null }, 
-        totalDistance: { type: Number, default: 0 }, 
+        percentage: { type: Number, default: 0, min: 0, max: 100 },
+        etaMinutes: { type: Number, default: null },
+        totalDistance: { type: Number, default: 0 },
         traveledDistance: { type: Number, default: 0 },
-        activeRouteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Route', default: null }, 
-        lastUpdated: { type: Date, default: Date.now } 
+        activeRouteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Route', default: null },
+        lastUpdated: { type: Date, default: Date.now },
+        accumulatedDistance: { type: Number, default: 0 },
+        originalTotalDistance: { type: Number, default: 0 }
     }
 }, { versionKey: false });
 
