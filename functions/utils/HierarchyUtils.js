@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Route from '../models/Route.js';
 
 /**
  * Mapeo de roles a sus capacidades de creación
@@ -54,6 +55,25 @@ export async function getUserHierarchy(userEmail) {
 }
 
 /**
+ * Obtiene IDs de conductores asignados a rutas de un cliente
+ * @param {String} userId - ID del usuario cliente
+ * @returns {Array} - Lista de ObjectIds de conductores
+ */
+async function getDriversFromRoutes(userId) {
+    try {
+        const routes = await Route.find({ 
+            customerId: userId,
+            status: { $in: ["Ruta no iniciada", "Ruta futura", "Ruta en curso"] }
+        }).select('driverId');
+        
+        return routes.map(route => route.driverId);
+    } catch (error) {
+        console.error('Error obteniendo conductores:', error);
+        return [];
+    }
+}
+
+/**
  * Valida si un usuario puede crear otro tipo de usuario
  * @param {String} creatorRole - Rol del creador
  * @param {String} targetRole - Rol a crear
@@ -94,11 +114,15 @@ export async function getScopeFilter(user) {
             };
 
         case 'direct':
-            // Administrador solo ve sus hijos directos
-            return { 
+            return {
                 $or: [
-                    { superior_account: user.email }, // Sus empleados
-                    { _id: user._id }                 // Él mismo (para que cargue el panel superior)
+                    { superior_account: user.email },
+                    { _id: user._id },
+                    {
+                        _id: {
+                            $in: await getDriversFromRoutes(user._id)
+                        }
+                    }
                 ]
             };
 
@@ -120,7 +144,7 @@ export async function validateNoCircularReference(superiorEmail, targetEmail) {
     if (!superiorEmail) return true;
 
     const hierarchy = await getUserHierarchy(targetEmail);
-    
+
     if (hierarchy.includes(superiorEmail)) {
         throw new Error('No se puede crear una referencia circular en la jerarquía');
     }
