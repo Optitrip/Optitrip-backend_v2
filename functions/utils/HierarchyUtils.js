@@ -7,19 +7,19 @@ import Route from '../models/Route.js';
 export const ROLE_PERMISSIONS = {
     'Super Administrador': {
         canCreate: ['Distribuidor', 'Administrador', 'Cliente', 'Conductor'],
-        scope: 'all' // Ve todo el sistema
+        scope: 'all'
     },
     'Distribuidor': {
         canCreate: ['Administrador', 'Cliente', 'Conductor'],
-        scope: 'hierarchical' // Ve su árbol jerárquico
+        scope: 'hierarchical'
     },
     'Administrador': {
         canCreate: ['Cliente', 'Conductor'],
-        scope: 'direct' // Solo ve sus hijos directos
+        scope: 'direct'
     },
     'Cliente': {
         canCreate: [],
-        scope: 'self'
+        scope: 'direct'
     },
     'Conductor': {
         canCreate: [],
@@ -100,11 +100,9 @@ export async function getScopeFilter(user) {
 
     switch (permissions.scope) {
         case 'all':
-            // Super Admin ve todo
             return {};
 
         case 'hierarchical':
-            // Distribuidor ve su árbol completo
             const hierarchy = await getUserHierarchy(user.email);
             return {
                 $or: [
@@ -114,20 +112,17 @@ export async function getScopeFilter(user) {
             };
 
         case 'direct':
-            return {
+            const driverIds = await getDriversFromRoutes(user._id);
+            
+            return { 
                 $or: [
                     { superior_account: user.email },
                     { _id: user._id },
-                    {
-                        _id: {
-                            $in: await getDriversFromRoutes(user._id)
-                        }
-                    }
+                    { _id: { $in: driverIds } }  
                 ]
             };
 
         case 'self':
-            // Cliente/Conductor solo se ve a sí mismo
             return { _id: user._id };
 
         default:
