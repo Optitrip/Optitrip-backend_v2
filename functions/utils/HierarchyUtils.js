@@ -100,9 +100,17 @@ export async function getScopeFilter(user) {
 
     switch (permissions.scope) {
         case 'all':
-            return {};
+            // Super Admin ve su árbol jerárquico completo
+            const superHierarchy = await getUserHierarchy(user.email);
+            return {
+                $or: [
+                    { superior_account: { $in: superHierarchy } },
+                    { email: { $in: superHierarchy } }
+                ]
+            };
 
         case 'hierarchical':
+            // Distribuidor ve su árbol completo
             const hierarchy = await getUserHierarchy(user.email);
             return {
                 $or: [
@@ -112,13 +120,15 @@ export async function getScopeFilter(user) {
             };
 
         case 'direct':
+            // Administrador ve sus hijos directos
+            // Cliente ve sus hijos directos + conductores de sus rutas
             const driverIds = await getDriversFromRoutes(user._id);
             
             return { 
                 $or: [
                     { superior_account: user.email },
                     { _id: user._id },
-                    { _id: { $in: driverIds } }  
+                    { _id: { $in: driverIds } }
                 ]
             };
 
