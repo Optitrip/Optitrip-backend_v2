@@ -82,7 +82,7 @@ app.get("/", (req, res) => {
 setInterval(async () => {
   console.log(`[${new Date().toISOString()}] Running tracking status update...`);
   await updateTrackingStatuses();
-}, 30000);
+}, 5000); // Cada 5 segundos
 
 const port = process.env.PORT || 5000;
 app.listen(port, '0.0.0.0', () => {
