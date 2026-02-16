@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Route from '../models/Route.js';
 
 /**
  * Mapeo de roles a sus capacidades de creación
@@ -6,19 +7,19 @@ import User from '../models/User.js';
 export const ROLE_PERMISSIONS = {
     'Super Administrador': {
         canCreate: ['Distribuidor', 'Administrador', 'Cliente', 'Conductor'],
-        scope: 'all' // Ve todo el sistema
+        scope: 'all'
     },
     'Distribuidor': {
         canCreate: ['Administrador', 'Cliente', 'Conductor'],
-        scope: 'hierarchical' // Ve su árbol jerárquico
+        scope: 'hierarchical'
     },
     'Administrador': {
         canCreate: ['Cliente', 'Conductor'],
-        scope: 'direct' // Solo ve sus hijos directos
+        scope: 'direct'
     },
     'Cliente': {
         canCreate: [],
-        scope: 'self'
+        scope: 'direct'
     },
     'Conductor': {
         canCreate: [],
@@ -54,6 +55,25 @@ export async function getUserHierarchy(userEmail) {
 }
 
 /**
+ * Obtiene IDs de conductores asignados a rutas de un cliente
+ * @param {String} userId - ID del usuario cliente
+ * @returns {Array} - Lista de ObjectIds de conductores
+ */
+async function getDriversFromRoutes(userId) {
+    try {
+        const routes = await Route.find({ 
+            customerId: userId,
+            status: { $in: ["Ruta no iniciada", "Ruta futura", "Ruta en curso"] }
+        }).select('driverId');
+        
+        return routes.map(route => route.driverId);
+    } catch (error) {
+        console.error('Error obteniendo conductores:', error);
+        return [];
+    }
+}
+
+/**
  * Valida si un usuario puede crear otro tipo de usuario
  * @param {String} creatorRole - Rol del creador
  * @param {String} targetRole - Rol a crear
@@ -80,8 +100,14 @@ export async function getScopeFilter(user) {
 
     switch (permissions.scope) {
         case 'all':
-            // Super Admin ve todo
-            return {};
+            // Super Admin ve su árbol jerárquico completo
+            const superHierarchy = await getUserHierarchy(user.email);
+            return {
+                $or: [
+                    { superior_account: { $in: superHierarchy } },
+                    { email: { $in: superHierarchy } }
+                ]
+            };
 
         case 'hierarchical':
             // Distribuidor ve su árbol completo
@@ -94,16 +120,19 @@ export async function getScopeFilter(user) {
             };
 
         case 'direct':
-            // Administrador solo ve sus hijos directos
+            // Administrador ve sus hijos directos
+            // Cliente ve sus hijos directos + conductores de sus rutas
+            const driverIds = await getDriversFromRoutes(user._id);
+            
             return { 
                 $or: [
-                    { superior_account: user.email }, // Sus empleados
-                    { _id: user._id }                 // Él mismo (para que cargue el panel superior)
+                    { superior_account: user.email },
+                    { _id: user._id },
+                    { _id: { $in: driverIds } }
                 ]
             };
 
         case 'self':
-            // Cliente/Conductor solo se ve a sí mismo
             return { _id: user._id };
 
         default:
@@ -120,7 +149,7 @@ export async function validateNoCircularReference(superiorEmail, targetEmail) {
     if (!superiorEmail) return true;
 
     const hierarchy = await getUserHierarchy(targetEmail);
-    
+
     if (hierarchy.includes(superiorEmail)) {
         throw new Error('No se puede crear una referencia circular en la jerarquía');
     }

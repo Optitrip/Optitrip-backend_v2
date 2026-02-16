@@ -178,7 +178,7 @@ export const trackDriverLocation = async (req, res) => {
 export const updateTrackingStatuses = async () => {
     try {
         const now = new Date();
-        const thresholdTime = new Date(now.getTime() - 90 * 1000);
+        const thresholdTime = new Date(now.getTime() - 35 * 1000);
 
         // Encuentra todos los registros donde isAuthenticated es true y status es Activo o Inactivo
         const records = await Tracking.find({

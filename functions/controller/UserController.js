@@ -588,3 +588,50 @@ export const updateFCMToken = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * Endpoint para obtener conductores visibles según el scope del usuario
+ */
+export const getVisibleDrivers = async (req, res) => {
+  try {
+    const { requestingUserId } = req.query;
+
+    if (!requestingUserId) {
+      return res.status(400).json({ message: "requestingUserId es requerido" });
+    }
+
+    const requestingUser = await User.findById(requestingUserId);
+    if (!requestingUser) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    const scopeFilter = await getScopeFilter(requestingUser);
+
+    // Filtrar solo conductores dentro del scope
+    const drivers = await User.find({
+      ...scopeFilter,
+      type_user: "Conductor"
+    }).populate("rol_id");
+
+    const driversWithTracking = await Promise.all(drivers.map(async (driver) => {
+      const driverObj = driver.toObject();
+      const tracking = await Tracking.findOne({ userId: driver._id });
+
+      if (tracking) {
+        driverObj.tracking = {
+          status: tracking.status,
+          location: tracking.location,
+          routeProgress: tracking.routeProgress || null
+        };
+      }
+
+      return driverObj;
+    }));
+
+    res.json(driversWithTracking);
+
+  } catch (error) {
+    console.error('Error fetching visible drivers:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
