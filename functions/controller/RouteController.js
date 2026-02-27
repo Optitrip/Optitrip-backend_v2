@@ -641,14 +641,21 @@ export const createRoute = async (req, res) => {
             routeStatus = "Ruta futura";
         }
 
-        const departureTimeUTC = scheduledTime
-            ? fromZonedTime(scheduledTime, 'America/Mexico_City')
-            : new Date(departureTime);
-
         const frontDurationMs = new Date(arrivalTime).getTime() - new Date(departureTime).getTime();
 
-        const arrivalTimeUTC = new Date(departureTimeUTC.getTime() + frontDurationMs);
+        let departureTimeUTC;
+        let arrivalTimeUTC;
 
+        if (scheduledTime && timeType === 'Llegar a las:') {
+            arrivalTimeUTC = fromZonedTime(scheduledTime, 'America/Mexico_City');
+            departureTimeUTC = new Date(arrivalTimeUTC.getTime() - frontDurationMs);
+        } else if (scheduledTime && timeType === 'Salir a las:') {
+            departureTimeUTC = fromZonedTime(scheduledTime, 'America/Mexico_City');
+            arrivalTimeUTC = new Date(departureTimeUTC.getTime() + frontDurationMs);
+        } else {
+            departureTimeUTC = new Date(departureTime);
+            arrivalTimeUTC = new Date(arrivalTime);
+        }
 
         let validRouteSections = [];
         if (routeSections && Array.isArray(routeSections)) {
@@ -915,7 +922,7 @@ export const updateRoute = async (req, res) => {
 export const reportRouteDeviation = async (req, res) => {
     try {
         const { codeRoute } = req.params;
-        const { type, lat, lng, recalculatedPolyline,  recalculatedSections } = req.body;
+        const { type, lat, lng, recalculatedPolyline, recalculatedSections } = req.body;
 
         const route = await Route.findOne({ codeRoute });
 
@@ -931,7 +938,7 @@ export const reportRouteDeviation = async (req, res) => {
                 `https://revgeocode.search.hereapi.com/v1/revgeocode?at=${lat},${lng}&lang=es-MX&apiKey=${apiKey}`
             );
             const geoData = await geoResponse.json();
-            
+
             if (geoData.items && geoData.items.length > 0) {
                 address = geoData.items[0].address.label;
             }
@@ -961,7 +968,7 @@ export const reportRouteDeviation = async (req, res) => {
         route.deviations.push(deviation);
         await route.save();
 
-         res.status(200).json({ 
+        res.status(200).json({
             message: "Deviation reported successfully",
             deviationId: route.deviations[route.deviations.length - 1]._id
         });
@@ -1025,14 +1032,14 @@ export const getUnseenDeviations = async (req, res) => {
 
         const routes = await Route.find({
             "deviations.seenByAdmin": false,
-            driverId: { $in: allowedUserIds } 
+            driverId: { $in: allowedUserIds }
         }).populate(['driverId']);
 
         let alerts = [];
 
         routes.forEach(route => {
             route.deviations.forEach(dev => {
-                if (!dev.seenByAdmin) { 
+                if (!dev.seenByAdmin) {
                     alerts.push({
                         routeId: route._id,
                         codeRoute: route.codeRoute,
@@ -1048,7 +1055,7 @@ export const getUnseenDeviations = async (req, res) => {
                 }
             });
         });
-        
+
         alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         res.json(alerts);
@@ -1068,8 +1075,8 @@ export const markDeviationAsSeen = async (req, res) => {
         if (deviation) {
             deviation.seenByAdmin = true;
             await route.save();
-            res.json({ 
-                message: "Alert marked as seen", 
+            res.json({
+                message: "Alert marked as seen",
                 deviation: {
                     deviationId: deviation._id,
                     seenByAdmin: deviation.seenByAdmin
@@ -1086,18 +1093,14 @@ export const markDeviationAsSeen = async (req, res) => {
 export const sendRouteNotification = async (req, res) => {
     try {
         const { codeRoute, driverId } = req.body;
-        
-        console.log('[NOTIF] Enviando notificación para ruta:', codeRoute, 'a driver:', driverId);
-        
+
         const driver = await User.findById(driverId);
         if (!driver || !driver.fcmToken) {
-            console.log('[NOTIF] Driver no encontrado o sin FCM token');
             return res.status(400).json({ message: "Driver or FCM token not found" });
         }
 
         const route = await Route.findOne({ codeRoute });
         if (!route) {
-            console.log('[NOTIF] Ruta no encontrada');
             return res.status(404).json({ message: "Route not found" });
         }
 
@@ -1109,23 +1112,20 @@ export const sendRouteNotification = async (req, res) => {
 
         const notificationData = {
             type: "route_assigned",
-            codeRoute: codeRoute,  
+            codeRoute: codeRoute,
             departureTime: route.departureTime.toISOString(),
             routeId: route._id.toString(),
-            title: "Nueva Ruta Asignada", 
-            body: `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}` 
+            title: "Nueva Ruta Asignada",
+            body: `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}`
         };
-
-        console.log('[NOTIF] Data a enviar:', notificationData);
 
         await sendNotification(
             driver.fcmToken,
             "Nueva Ruta Asignada",
             `Se te ha asignado la ruta ${codeRoute}. Salida: ${formattedDeparture}`,
-            notificationData  
+            notificationData
         );
 
-        console.log('[NOTIF] Notificación enviada exitosamente');
         res.json({ success: true });
     } catch (error) {
         console.error('[NOTIF] Error:', error);

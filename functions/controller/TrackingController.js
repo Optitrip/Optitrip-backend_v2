@@ -104,7 +104,7 @@ export const trackDriverLocation = async (req, res) => {
                 status: isAuthenticated ? (route ? 'Activo' : 'Disponible') : 'Fuera de línea',
                 superior_account,
                 routeProgress: routeProgress ? {
-                    percentage: routeProgress.percentage || 0,
+                    percentage: Math.max(0, Math.min(100, routeProgress.percentage || 0)),
                     etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null)
                         ? routeProgress.etaMinutes
                         : null,
@@ -113,7 +113,6 @@ export const trackDriverLocation = async (req, res) => {
                     activeRouteId: route ? route._id : null,
                     accumulatedDistance: routeProgress.accumulatedDistance || 0,
                     originalTotalDistance: routeProgress.originalTotalDistance || routeProgress.totalDistance || 0,
-
                     lastUpdated: new Date()
                 } : undefined
             });
@@ -130,7 +129,7 @@ export const trackDriverLocation = async (req, res) => {
 
                     if (routeProgress) {
                         tracking.routeProgress = {
-                            percentage: routeProgress.percentage || 0,
+                            percentage: Math.max(0, Math.min(100, routeProgress.percentage || 0)),
                             etaMinutes: (routeProgress.etaMinutes !== undefined && routeProgress.etaMinutes !== null)
                                 ? routeProgress.etaMinutes
                                 : null,
@@ -139,7 +138,6 @@ export const trackDriverLocation = async (req, res) => {
                             activeRouteId: route._id,
                             accumulatedDistance: routeProgress.accumulatedDistance || tracking.routeProgress?.accumulatedDistance || 0,
                             originalTotalDistance: routeProgress.originalTotalDistance || tracking.routeProgress?.originalTotalDistance || routeProgress.totalDistance || 0,
-
                             lastUpdated: new Date()
                         };
                     }
