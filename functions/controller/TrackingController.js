@@ -124,7 +124,7 @@ export const trackDriverLocation = async (req, res) => {
             if (isAuthenticated) {
                 tracking.location = { latitude, longitude, timestamp: new Date() };
 
-                if (route) {
+                if (route || routeProgress) {
                     tracking.status = 'Activo';
 
                     if (routeProgress) {
@@ -135,7 +135,7 @@ export const trackDriverLocation = async (req, res) => {
                                 : null,
                             totalDistance: routeProgress.totalDistance || 0,
                             traveledDistance: routeProgress.traveledDistance || 0,
-                            activeRouteId: route._id,
+                            activeRouteId: route ? route._id : (tracking.routeProgress ? tracking.routeProgress.activeRouteId : null),
                             accumulatedDistance: routeProgress.accumulatedDistance || tracking.routeProgress?.accumulatedDistance || 0,
                             originalTotalDistance: routeProgress.originalTotalDistance || tracking.routeProgress?.originalTotalDistance || routeProgress.totalDistance || 0,
                             lastUpdated: new Date()

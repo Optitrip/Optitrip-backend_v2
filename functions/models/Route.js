@@ -17,10 +17,10 @@ const assignedBySchema = new mongoose.Schema({
 }, { _id: false });
 
 const deviationSchema = new mongoose.Schema({
-    type: { 
-        type: String, 
+    type: {
+        type: String,
         required: true,
-        enum: ['DEVIATION_DETECTED', 'ORIGINAL_ROUTE', 'NEW_DESTINATION'] 
+        enum: ['DEVIATION_DETECTED', 'ORIGINAL_ROUTE', 'NEW_DESTINATION']
     },
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
@@ -28,7 +28,7 @@ const deviationSchema = new mongoose.Schema({
     seenByAdmin: { type: Boolean, default: false },
     address: { type: String, default: '' },
     recalculatedRoute: {
-        polyline: String, 
+        polyline: String,
         sections: [{
             polyline: String,
             distance: Number,
@@ -57,6 +57,8 @@ const routeSchema = new mongoose.Schema({
     status: { type: String, required: true },
     reminderSent: { type: Boolean, default: false },
     startNotificationSent: { type: Boolean, default: false },
+    actualDepartureTime: { type: Date, default: null },
+    actualArrivalTime: { type: Date, default: null },
     deviations: [deviationSchema],
     avoidAreas: [{
         name: String,

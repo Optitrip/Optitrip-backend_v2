@@ -22,6 +22,14 @@ const convertDurationToMinutes = (duration) => {
     return totalMinutes;
 };
 
+const calculateRealDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) return null;
+    const diffMs = new Date(endDate) - new Date(startDate);
+    if (diffMs <= 0) return null;
+    const totalMinutes = Math.floor(diffMs / 60000);
+    return totalMinutes;
+};
+
 // Función para convertir minutos a formato días, horas y minutos
 const convertMinutesToDHM = (minutes) => {
     const days = Math.floor(minutes / 1440); // 1440 minutos en un día
@@ -86,7 +94,6 @@ export const getReportDetailsByDriver = async (req, res) => {
 
         // Procesar cada ruta y calcular los datos necesarios
         const results = routes.map(route => {
-            // Sumar toneladas descargadas de todos los puntos de la ruta
             const totalUnload = (route.origin.unload || 0) +
                 (route.destination.unload || 0) +
                 (route.waypoints && route.waypoints.length > 0
@@ -96,20 +103,25 @@ export const getReportDetailsByDriver = async (req, res) => {
             totalDownloadedTonnes += totalUnload;
             totalDistance += route.distance;
 
-            // Convertir duración a minutos y acumular
-            const durationMinutes = convertDurationToMinutes(route.durationTrip);
+            const realDepartureTime = route.actualDepartureTime || route.departureTime;
+            const realArrivalTime = route.actualArrivalTime || route.arrivalTime;
+            const realDurationMinutes = calculateRealDuration(realDepartureTime, realArrivalTime);
+            const durationMinutes = realDurationMinutes !== null
+                ? realDurationMinutes
+                : convertDurationToMinutes(route.durationTrip);
+
             totalDurationMinutes += durationMinutes;
 
             const durationHours = durationMinutes / 60;
-            const speed = route.distance / durationHours;
+            const speed = durationHours > 0 ? route.distance / durationHours : 0;
 
             return {
                 originName: route.origin.name,
-                departureTime: route.departureTime, // Convertir fecha de salida
-                arrivalTime: route.arrivalTime, // Convertir fecha de llegada
+                departureTime: realDepartureTime,
+                arrivalTime: realArrivalTime,
                 destinationName: route.destination.name,
                 waypoints: route.waypoints.length,
-                tripDuration: route.durationTrip,
+                tripDuration: convertMinutesToDHM(durationMinutes),
                 distance: route.distance,
                 averageSpeed: speed.toFixed(2),
                 totalUnload: totalUnload
@@ -183,8 +195,8 @@ export const getReportDetailsByStatus = async (req, res) => {
                 driverName: route.driverId ? route.driverId.name : 'Unknown',
                 codeRoute: route.codeRoute,
                 originName: route.origin.name,
-                departureTime: route.departureTime,
-                arrivalTime: route.arrivalTime,
+                departureTime: route.actualDepartureTime || route.departureTime,
+                arrivalTime: route.actualArrivalTime || route.arrivalTime,
                 destinationName: route.destination.name,
                 waypoints: route.waypoints.length,
                 tripDuration: route.durationTrip,
@@ -249,20 +261,26 @@ export const getReportDetailsByCustomer = async (req, res) => {
             totalDownloadedTonnes += totalUnload;
             totalDistance += route.distance;
 
-            // Convertir duración a minutos y acumular
-            const durationMinutes = convertDurationToMinutes(route.durationTrip);
+            // Calcular duración real si existen los tiempos reales, sino usar el estimado
+            const realDepartureTime = route.actualDepartureTime || route.departureTime;
+            const realArrivalTime = route.actualArrivalTime || route.arrivalTime;
+            const realDurationMinutes = calculateRealDuration(realDepartureTime, realArrivalTime);
+            const durationMinutes = realDurationMinutes !== null
+                ? realDurationMinutes
+                : convertDurationToMinutes(route.durationTrip);
+
             totalDurationMinutes += durationMinutes;
 
             const durationHours = durationMinutes / 60;
-            const speed = route.distance / durationHours;
+            const speed = durationHours > 0 ? route.distance / durationHours : 0;
 
             return {
                 originName: route.origin.name,
-                departureTime: route.departureTime, // Convertir fecha de salida
-                arrivalTime: route.arrivalTime, // Convertir fecha de llegada
+                departureTime: realDepartureTime,
+                arrivalTime: realArrivalTime,
                 destinationName: route.destination.name,
                 waypoints: route.waypoints.length,
-                tripDuration: route.durationTrip,
+                tripDuration: convertMinutesToDHM(durationMinutes),
                 distance: route.distance,
                 averageSpeed: speed.toFixed(2),
                 totalUnload: totalUnload
@@ -347,10 +365,16 @@ export const getReportDetailsByCodeRoute = async (req, res) => {
             driverName: driver ? driver.name : 'Unknown',
             customerName: customer ? customer.name : 'Unknown',
             originName: route.origin.name,
-            departureTime: route.departureTime,
-            arrivalTime: route.arrivalTime,
+            departureTime: route.actualDepartureTime || route.departureTime,  // <-- real o fallback
+            arrivalTime: route.actualArrivalTime || route.arrivalTime,
             destinationName: route.destination.name,
-            tripDuration: route.durationTrip,
+            tripDuration: (() => {
+                const mins = calculateRealDuration(
+                    route.actualDepartureTime || route.departureTime,
+                    route.actualArrivalTime || route.arrivalTime
+                );
+                return mins !== null ? convertMinutesToDHM(mins) : route.durationTrip;
+            })(),
             distance: route.distance,
             assignedByName: route.assignedBy.name,
             createdAt: route.createdAt,

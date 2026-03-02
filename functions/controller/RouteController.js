@@ -853,7 +853,10 @@ export const updateRouteStatus = async (req, res) => {
 
         const route = await Route.findOneAndUpdate(
             { codeRoute },
-            { status: "Ruta en curso" },
+            {
+                status: "Ruta en curso",
+                actualDepartureTime: new Date()
+            },
             { new: true }
         ).populate(['driverId', 'customerId'])
 
@@ -864,6 +867,26 @@ export const updateRouteStatus = async (req, res) => {
         res.json({ message: "Route status updated successfully", route });
     } catch (error) {
         console.log(error)
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const updateActualArrivalTime = async (req, res) => {
+    try {
+        const { codeRoute } = req.params;
+
+        const route = await Route.findOneAndUpdate(
+            { codeRoute },
+            { actualArrivalTime: new Date() },
+            { new: true }
+        );
+
+        if (!route) {
+            return res.status(404).json({ message: "Route not found" });
+        }
+
+        res.json({ message: "Arrival time updated", route });
+    } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };

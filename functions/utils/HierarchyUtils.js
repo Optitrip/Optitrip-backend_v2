@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Route from '../models/Route.js';
+import Tracking from '../models/Tracking.js';
 
 /**
  * Mapeo de roles a sus capacidades de creación
@@ -61,12 +62,23 @@ export async function getUserHierarchy(userEmail) {
  */
 async function getDriversFromRoutes(userId) {
     try {
-        const routes = await Route.find({ 
+        const routes = await Route.find({
             customerId: userId,
-            status: { $in: ["Ruta no iniciada", "Ruta futura", "Ruta en curso"] }
+            status: "Ruta en curso"
         }).select('driverId');
-        
-        return routes.map(route => route.driverId);
+
+        const driverIds = routes.map(route => route.driverId);
+
+        // Solo conductores con tracking "Activo"
+        const activeTrackings = await Tracking.find({
+            userId: { $in: driverIds.map(id => id.toString()) },
+            status: "Activo"
+        }).select('userId');
+
+        const activeDriverIds = activeTrackings.map(t => t.userId);
+
+        return activeDriverIds;
+
     } catch (error) {
         console.error('Error obteniendo conductores:', error);
         return [];
@@ -123,8 +135,8 @@ export async function getScopeFilter(user) {
             // Administrador ve sus hijos directos
             // Cliente ve sus hijos directos + conductores de sus rutas
             const driverIds = await getDriversFromRoutes(user._id);
-            
-            return { 
+
+            return {
                 $or: [
                     { superior_account: user.email },
                     { _id: user._id },

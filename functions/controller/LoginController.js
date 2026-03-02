@@ -55,7 +55,7 @@ export const login = async (req, res) => {
         }
 
         const user = await User.findOne({ email }).populate('rol_id');
-        
+
         if (!user || !(password === user.password)) {
             return res.status(401).json({ message: "Credenciales inválidas" });
         }
@@ -69,7 +69,7 @@ export const login = async (req, res) => {
                 superior_account: user.superior_account,
                 email: user.email,
                 name: user.name,
-                type_user: user.type_user, 
+                type_user: user.type_user,
                 role: user.rol_id.name
             }
         });
