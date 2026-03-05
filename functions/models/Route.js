@@ -98,6 +98,7 @@ const routeSchema = new mongoose.Schema({
         departureTime: String,
         arrivalTime: String,
         distance: Number,
+        duration: Number,
     }],
     deviationAlertEnabled: {
         type: Boolean,

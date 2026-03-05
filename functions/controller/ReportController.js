@@ -190,16 +190,23 @@ export const getReportDetailsByStatus = async (req, res) => {
 
         // Procesar cada ruta
         const results = routes.map(route => {
+            const realDepartureTime = route.actualDepartureTime || route.departureTime;
+            const realArrivalTime = route.actualArrivalTime || route.arrivalTime;
+            const realDurationMinutes = calculateRealDuration(realDepartureTime, realArrivalTime);
+            const durationMinutes = realDurationMinutes !== null
+                ? realDurationMinutes
+                : convertDurationToMinutes(route.durationTrip);
+
             return {
                 routeId: route._id,
                 driverName: route.driverId ? route.driverId.name : 'Unknown',
                 codeRoute: route.codeRoute,
                 originName: route.origin.name,
-                departureTime: route.actualDepartureTime || route.departureTime,
-                arrivalTime: route.actualArrivalTime || route.arrivalTime,
+                departureTime: realDepartureTime,
+                arrivalTime: realArrivalTime,
                 destinationName: route.destination.name,
                 waypoints: route.waypoints.length,
-                tripDuration: route.durationTrip,
+                tripDuration: convertMinutesToDHM(durationMinutes),
                 distance: route.distance,
                 status: route.status
             };

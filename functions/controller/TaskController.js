@@ -82,16 +82,17 @@ export const createTask = async (req, res) => {
             comments,
             codeRoute,
             point,
-            images
+            images,
+            createdAt
         } = req.body;
 
         if (!point) {
-             return res.status(400).json({ message: "Field 'point' is required" });
+            return res.status(400).json({ message: "Field 'point' is required" });
         }
 
         let pointArray;
         try {
-            pointArray = JSON.parse(point); 
+            pointArray = JSON.parse(point);
         } catch (error) {
             throw new Error("Invalid JSON format for point: " + error);
         }
@@ -133,10 +134,8 @@ export const createTask = async (req, res) => {
             throw new Error("Images should have the format [{ \"imageUrl\": \"...\" }]");
         }
 
-        // Genera la fecha createdAt desde el servidor
-        const createdAt = new Date().toISOString();
+        const finalCreatedAt = createdAt ? createdAt : new Date().toISOString();
 
-        // Verifica la existencia de la ruta y el punto
         const route = await Route.findOne({ codeRoute });
         if (!route) {
             return res.status(400).json({ message: "Route not found" });
@@ -144,7 +143,7 @@ export const createTask = async (req, res) => {
 
         // Encuentra y actualiza el punto
         let pointUpdated = false;
-        
+
         const updatePointStatus = (pointItem) => {
             if (pointItem && pointItem.name === pointNameFromData) {
                 pointItem.status = "Completado";
@@ -155,7 +154,7 @@ export const createTask = async (req, res) => {
         if (route.waypoints) {
             route.waypoints.forEach(updatePointStatus);
         }
-        
+
         if (route.destination) {
             updatePointStatus(route.destination);
         }
@@ -167,9 +166,9 @@ export const createTask = async (req, res) => {
         // Verificar si todos los waypoints y el destino tienen el estado "Completado"
         const allPointsToCheck = [...(route.waypoints || [])];
         if (route.destination) allPointsToCheck.push(route.destination);
-        
+
         const allPointsCompleted = allPointsToCheck.every(p => p.status === "Completado");
-        
+
         if (allPointsCompleted) {
             route.status = "Completado";
         }
@@ -179,11 +178,11 @@ export const createTask = async (req, res) => {
             signature,
             taskStatus,
             deliveryStatus,
-            images: normalizedImagesArray, // Almacenar las imágenes tal cual vienen
+            images: normalizedImagesArray,
             comments,
             codeRoute,
             point: pointArray,
-            createdAt
+            createdAt: finalCreatedAt
         });
 
         // Guarda la nueva tarea en la base de datos
